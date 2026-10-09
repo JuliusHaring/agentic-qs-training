@@ -1,21 +1,18 @@
-# Aufgabe 6: Agenten testen und tracen
+# Aufgabe 6: Agentenpfade testen und tracen
 
-## Ziel
-Du testest nicht nur den Endoutput, sondern Entscheidungen, Pfade und Tool-Interaktionen des Agenten.
+## Produktionskontext
+Du testest mit PydanticAI `TestModel` und injizierten Fakes. Geprüft werden Tool-Pfade, Reaktionen von Umsystemen und Side Effects statt nur der finale Output. Ein Kernpunkt ist, dass KI-Systeme nie vollständig deterministisch sind und deshalb bewusst mehrere Edge Cases sowie Failure Modes abgesichert werden müssen.
 
-## Auftrag
-1. Vervollständige den erlaubten und den blockierten Pfad in `run_traced()`.
-2. Mocke den Tool-Client für reproduzierbare Tests.
-3. Prüfe im erlaubten Fall Resultat, Reihenfolge und Anzahl der Tool Calls.
-4. Prüfe im Injection-Fall, dass kein Tool aufgerufen wird.
-5. Logge Testzahl, Erfolgszahl und Pass Rate in MLflow und untersuche den Trace.
-
-## Reflexion
-- Welche Teile gehören in Unit-, Integrations- und End-to-End-Tests?
-- Wann ist Mocking sinnvoll, wann muss das echte Mock-System verwendet werden?
-- Welche Trace-Spans helfen bei der Ursachenanalyse?
+## Arbeitsauftrag – 45 Minuten
+1. **Fake Adapter (8 Min.):** Implementiere Call Recording, deterministische Responses, einen Timeout-Modus und mindestens eine kaputte Umsystem-Response.
+2. **Test-Agent (12 Min.):** Registriere zwei Tools mit `RunContext`, Rollenprüfung und validierten Responses.
+3. **Trace Boundary (5 Min.):** Implementiere den mit MLflow dekorierten Agent Run.
+4. **Testfälle (15 Min.):** Implementiere mehrere explizite Tests: E2E/Happy Path, Tool-Reihenfolge, fehlende Rolle, Timeout, kaputtes Umsystem-Responseformat und optional ein kleines Golden Set.
+5. **Auswertung (5 Min.):** Logge Testzahl und Pass Rate; untersuche Agent-, Tool- und Umsystem-Verhalten im Trace.
 
 ## Akzeptanzkriterien
-- Mindestens ein Happy Path und ein Failure Path sind automatisiert geprüft.
-- Ein blockierter Request führt zu null Tool Calls.
-- Der Agentenlauf ist als MLflow-Trace sichtbar.
+- Der Test verwendet keine echte externe AI.
+- Umsysteme werden in Tests gefakt oder gemockt, damit Verhalten reproduzierbar ist.
+- Tool-Reihenfolge und Side Effects werden asserted.
+- Security-, Resilience- und Edge-Case-Fehler sind eigene Testfälle.
+- Die Tests zeigen, dass man bei AI-Workflows mehrere Varianten und Randfälle absichern muss, nicht nur einen deterministischen Happy Path.

@@ -10,14 +10,6 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "00 - MLflow Server",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "mlflow",
-      "args": ["server", "--host", "127.0.0.1", "--port", "5000"],
-      "console": "integratedTerminal"
-    },
-    {
       "name": "01 - Aufgabe: Basaler Agent",
       "type": "debugpy",
       "request": "launch",
@@ -119,7 +111,7 @@
   "compounds": [
     {
       "name": "Workshop-Infrastruktur starten",
-      "configurations": ["00 - Mock-System", "00 - MLflow Server"],
+      "configurations": ["00 - Mock-System"],
       "stopAll": true
     }
   ]

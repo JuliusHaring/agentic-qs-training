@@ -1,257 +1,179 @@
-# AI-Automatisierung: Qualität, Validierung und Testing
+# Eintagesschulung: QS, Testing & Validierung in AI-Automatisierung
 
-## Leitidee
+## Kernbotschaft
+AI-Automatisierung ist die Einbettung eines probabilistischen Systems in einen deterministischen Geschäftsprozess. Genau deshalb reicht klassisches Testing allein nicht aus: du musst Verhalten, Verträge, Guardrails, Tool-Nutzung, Observability und Release Gates gemeinsam absichern.
 
-AI-Automatisierung ist der kontrollierte Einsatz einer probabilistischen Komponente in einem grundsätzlich deterministischen Geschäftsprozess. Ein Sprachmodell kann für denselben Input unterschiedliche plausible Antworten erzeugen. Qualität bedeutet deshalb nicht nur „richtiger Output“, sondern auch robustes Verhalten, validierte Systemgrenzen, angemessene Sicherheit, nachvollziehbare Entscheidungen und kontrollierte Fehlerfälle.
+## Was in einem Tag wirklich hängen bleiben soll
 
-Während dieses Schulungstags entwickelst du **einen durchgängigen Support-Agenten** schrittweise weiter. Der Agent erhält eine Kundenanfrage und soll daraus eine sichere, nachvollziehbare Ticket-Automatisierung machen. Jede Aufgabe baut auf dem Stand des vorherigen Blocks auf. Es entstehen keine sieben voneinander unabhängigen Beispiele, sondern sieben Evolutionsstufen desselben Systems.
+### 1. AI ist nicht deterministisch – dein System muss es trotzdem sein
+- LLM-Outputs variieren, selbst bei gleichem Prompt.
+- Fachprozesse, APIs, Berechtigungen und Business Rules bleiben aber deterministisch.
+- Deshalb darfst du AI nicht als "magische Black Box", sondern nur als kontrollierte Komponente in einer Software-Architektur einsetzen.
+- Entscheidend ist nicht nur `Expected Output`, sondern vor allem `Expected Behaviour`.
 
-## Durchgängiges Szenario
+### 2. Teste nicht nur Antworten, sondern Verträge und Risiken
+- Freitext ist schwer stabil zu validieren.
+- Strukturierte Outputs mit Pydantic-Schemas, Allowed Values und Pflichtfeldern machen Systeme testbar.
+- Gute QS fragt: Ist der Output korrekt, vollständig, konsistent und robust gegen Randfälle?
+- Schlechte Pfade müssen sichtbar getestet werden: leere Inputs, widersprüchliche Daten, Injection, fehlende Rechte, Timeouts.
 
-Der Agent soll langfristig:
+### 3. Red-Green bei AI heißt oft: erst kaputt sehen, dann verbessern
+- Zeige zuerst das falsche Verhalten: unstrukturierte Antworten, erfolgreiche Prompt Injection, unvalidierte Tool Calls, fehlende Release Gates.
+- Die Teilnehmenden verbessern dann gezielt eine absichtlich schlechte Ausgangslösung, statt alles auf leerer Wiese neu zu bauen.
+- Dieser Kontrast ist didaktisch wichtig, weil Schutzmaßnahmen sonst wie abstrakte Theorie wirken.
 
-1. eine natürlichsprachliche Support-Anfrage verstehen;
-2. Kategorie, Priorität und Sicherheit der Entscheidung bestimmen;
-3. unsichere oder gefährliche Anfragen erkennen;
-4. Kundendaten über ein Tool abrufen;
-5. ein Ticket mit validierten Parametern erstellen;
-6. den Ablauf testen und vollständig tracen;
-7. seine Qualität nach dem Deployment kontinuierlich überwachen.
+### 4. Tool Calling und Agenten brauchen dieselbe Disziplin wie verteilte Systeme
+- Ein Agent ist kein einzelner LLM-Call, sondern ein Workflow mit Zustand, Entscheidungen und Seiteneffekten.
+- Tool Selection, Tool-Reihenfolge, Parameter-Validierung und Fehlerbehandlung müssen explizit getestet werden.
+- Besonders kritisch: Berechtigungen, unerlaubte Tool Calls, Retry-Verhalten, Timeouts und fehlerhafte Tool-Responses.
 
-Das deterministische Mock-System stellt Kunden- und Ticket-Endpunkte bereit. Das gemeinsame Python-Paket `training_lib` kapselt die wiederverwendbaren Bestandteile wie Modelladapter, Datenmodelle, Agentenlogik, Guardrails, Tool-Client, Evaluation und MLflow-Anbindung.
+### 5. Runtime Validation schlägt Vertrauen
+- Auch wenn ein Modell "meistens richtig" ist, muss der Output zur Laufzeit validiert werden.
+- Nutze strukturierte Outputs, JSON Schema, Pydantic-Modelle, Business Rules und Plausibilitätsprüfungen.
+- Alles, was echte Aktionen auslöst, braucht Guardrails oder Human Approval.
 
-## Lernziele
+### 6. Qualität endet nicht beim Testlauf
+- Nach Deployment brauchst du Observability: Traces, Input/Output-Logging, Fehlerquoten, Qualitätsmetriken, Review-Raten, Kosten, Latenz.
+- Produktionsfälle werden zu neuen Testfällen.
+- Änderungen an Prompt, Modell, Tooling oder Policies müssen Regression Runs auslösen.
 
-Am Ende kannst du:
-
-- deterministische Softwareverträge von probabilistischem Modellverhalten unterscheiden;
-- den Unterschied zwischen einer JSON-Anweisung im Prompt und technisch erzwungenen Structured Outputs erklären;
-- einen Confidence-Score empirisch kalibrieren und mit klassischen ML-Metriken bewerten;
-- Input-, Output- und Action-Guardrails risikobasiert einsetzen;
-- MCP- beziehungsweise Tool-Aufrufe inklusive Parametern und Rückgaben validieren;
-- Unit-, Integrations-, End-to-End- und Regressionstests für Agenten schreiben;
-- Agentenpfade und Tool-Aufrufe mit MLflow Tracing nachvollziehen;
-- Produktionsqualität, Drift, Fehler, Latenz und Kosten kontinuierlich überwachen.
-
-## Arbeitsweise
-
-Jeder Block umfasst 60 Minuten:
-
-- **15 Minuten Schulung:** Konzept, Risiken und Designentscheidung;
-- **35 Minuten Coding:** markierte Lücken in `aufgabe.py` ausfüllen;
-- **10 Minuten Review:** mit `loesung.py` vergleichen und Messwerte diskutieren.
-
-Zu jedem Block gehören:
-
-- `AUFGABE.md` mit Ziel, Kontext, Arbeitsschritten und Akzeptanzkriterien;
-- `loesung.py` als zuerst entwickelte und ausführbare Referenzlösung;
-- `aufgabe.py` als ausführbares Lückentext-Gerüst;
-- eindeutig markierte Bereiche wie `TODO(AUFGABE)` und `TODO(OPTIONAL)`.
-
-Auch das Lückentext-Gerüst bleibt grundsätzlich startbar. Noch nicht implementierte Qualitätsschichten melden verständlich, welche Stelle ergänzt werden muss.
+### 7. MLflow ist nicht nur für ML, sondern auch für GenAI-QS nützlich
+- Tracke Prompts, Modellvarianten, Runs, Metriken, Artefakte und Traces.
+- Nutze MLflow, um Evals reproduzierbar zu machen und Release-Entscheidungen nachvollziehbar zu dokumentieren.
 
 ---
 
-## Tagesplan und Agenten-Evolution
+## Didaktischer Aufbau
+Die Schulung baut einen Support-Agenten schrittweise in Richtung Produktionsreife aus.
 
-| Zeit | Block | Inhalt | Neuer Stand des Agenten |
-|---|---|---|---|
-| 09:00–10:00 | **1. Basaler Agent** | AI vs. klassische Software, Nichtdeterminismus, Expected Output vs. Expected Behaviour | Der vorkonfigurierte Agent wird ausgeführt. Sein Prompt verlangt JSON, das Modell liefert aber nur rohen Text ohne technischen Strukturvertrag. |
-| 10:00–11:00 | **2. Structured Outputs** | Pydantic, JSON Schema, Pflichtfelder, erlaubte Werte, Parsing-Fehler | Der Agent liefert technisch erzwungene und validierte Daten mit Kategorie, Priorität, Begründung und Confidence. |
-| 11:00–12:00 | **3. Kalibrierung** | Confidence vs. tatsächliche Korrektheit, Accuracy, Precision, Recall, F1, Brier Score, Calibration Error | Der Confidence-Wert wird mit einem gelabelten Datensatz überprüft und die Metriken werden in MLflow protokolliert. |
-| 12:00–13:00 | **Mittagspause** | | |
-| 13:00–14:00 | **4. Guardrails** | Input-, Output- und Action-Guardrails, Schwellenwerte, Human Approval, sichere Abbrüche | Unsichere, manipulierte oder riskante Anfragen werden blockiert, weitergeleitet oder zur Freigabe vorgelegt. |
-| 14:00–15:00 | **5. MCP und Tool Calling** | Tool Discovery, Schemas, Auswahl, Parameter- und Resultatvalidierung, Timeouts, Berechtigungen | Der Agent verwendet validierte Tools für Kundenprüfung, Ticketerstellung und Statusänderung. |
-| 15:00–16:00 | **6. Testing und Tracing** | Unit-, Integrations-, E2E-, Failure- und Regressionstests; Mocking; Agentenpfade | Agent, Guardrails und Tool-Kette werden automatisiert getestet; MLflow zeichnet Modell-, Agenten- und Tool-Spans auf. |
-| 16:00–17:00 | **7. Production Observability und Continuous Validation** | Produktionsmetriken, Drift, Feedback, Kosten, Alerting, Release Gates | Produktionsfälle fließen in Regression Sets zurück; Qualitäts-, Sicherheits- und Betriebsgrenzen steuern Releases. |
+1. zuerst roher, fehleranfälliger Textoutput
+2. dann strukturierte Outputs
+3. dann Kalibrierung und Qualitätsmetriken
+4. dann Guardrails
+5. dann Tool Calling gegen ein Mock-System
+6. dann Tests und Tracing mit MLflow
+7. dann Production Validation mit Release Gates
 
----
-
-## Block 1 – Basaler Agent mit rohem Modelloutput
-
-### Fachlicher Fokus
-
-Ein Prompt ist kein Vertrag. Der erste Agent enthält bereits eine Anweisung wie:
-
-```text
-Antworte als JSON mit category, priority, reason und confidence.
-```
-
-Der Modelladapter gibt trotzdem ausschließlich **rohen Text** zurück. Der Agent versucht diesen Text anschließend selbst zu interpretieren. Dadurch werden typische Probleme sichtbar:
-
-- Markdown-Codeblöcke um das JSON;
-- fehlende oder zusätzliche Felder;
-- ungültige Werte und Datentypen;
-- erläuternder Text vor oder nach dem Objekt;
-- inkonsistente Antworten bei wiederholten Aufrufen.
-
-### Coding-Ziel
-
-Du führst den vorhandenen Agenten mehrfach aus, untersuchst seine Outputs und ergänzt zunächst nur eine einfache Beobachtung und Fehlererfassung. Der fragile Ausgangszustand ist ausdrücklich Teil der Übung und motiviert Block 2.
+Wo immer möglich gilt: **erst das falsche Verhalten sichtbar machen, dann eine schlechte Ausgangslösung gezielt verbessern.**
 
 ---
 
-## Block 2 – Structured Outputs
+## Grober Zeitplan für einen Tag
 
-### Fachlicher Fokus
+### Block 0 – Einführung
+- 15 min Schulung
+- Was ist AI-Automatisierung?
+- Deterministisch vs. probabilistisch
+- Warum klassische QS nicht ausreicht
 
-Die bloße Formatbeschreibung im Prompt wird durch ein maschinenlesbares Schema ersetzt. Das Modell beziehungsweise der Modelladapter muss direkt eine validierte Struktur liefern. Der Vertrag umfasst:
+### Block 1 – Baseline-Agent mit rohem Textoutput
+- 15 min Schulung
+- 45 min Coding
+- 15 min Besprechung
+- Ziel: du siehst Nichtdeterminismus, Parsing-Probleme und fragile Vertragsannahmen.
 
-- `category`: erlaubte Kategorien;
-- `priority`: erlaubte Prioritäten;
-- `reason`: kurze, nicht leere Begründung;
-- `confidence`: Zahl zwischen 0 und 1;
-- optional erkannte Risiken oder die empfohlene nächste Aktion.
+### Block 2 – Structured Output mit PydanticAI
+- 15 min Schulung
+- 45 min Coding
+- 15 min Besprechung
+- Ziel: du ersetzt fragile Textverarbeitung durch typisierte Outputs und Output-Validatoren.
 
-Schema-Validierung garantiert Struktur, aber noch keine fachliche Wahrheit. Eine syntaktisch gültige Antwort kann falsch oder schlecht kalibriert sein.
+### Block 3 – Kalibrierung und Evaluation
+- 15 min Schulung
+- 45 min Coding
+- 15 min Besprechung
+- Ziel: du misst Qualität systematisch statt nach Bauchgefühl.
 
-### Coding-Ziel
+### Mittagspause
+- 45 min Pause
 
-Du ersetzt den Raw-Text-Pfad durch Structured Output, behandelst Validierungsfehler explizit und verhinderst, dass ungültige Modellantworten in den Workflow gelangen.
+### Block 4 – Guardrails und sichere Abbruchbedingungen
+- 15 min Schulung
+- 45 min Coding
+- 15 min Besprechung
+- Ziel: du siehst zuerst erfolgreiche Angriffe oder Policy-Verstöße und blockierst sie danach.
 
----
+### Block 5 – Tool Calling / MCP-Denke / Workflow-Automatisierung
+- 15 min Schulung
+- 45 min Coding
+- 15 min Besprechung
+- Ziel: du verbindest den Agenten mit einem Mock-System und validierst Tool-Nutzung, Rollen und Seiteneffekte.
 
-## Block 3 – Confidence-Kalibrierung mit MLflow
+### Block 6 – Testing, Regression und Tracing mit MLflow
+- 15 min Schulung
+- 45 min Coding
+- 15 min Besprechung
+- Ziel: du reproduzierst Fehler, schreibst gezielte Tests und trackst Runs/Traces mit MLflow.
 
-### Fachlicher Fokus
+### Block 7 – Production Validation, QS-Gates und Observability
+- 15 min Schulung
+- 45 min Coding
+- 15 min Besprechung
+- Ziel: du definierst Qualitätsgrenzen, wertest Produktionssignale aus und stoppst Releases bei schlechter Qualität.
 
-Ein vom Modell ausgegebener Confidence-Wert ist zunächst nur eine Behauptung. Er muss gegen gelabelte Fälle geprüft werden. Dafür werden klassische ML-Metriken eingesetzt:
-
-- Accuracy als grober Gesamtwert;
-- Precision, Recall und F1 für relevante Klassen oder Automatisierungsentscheidungen;
-- Brier Score zur Bewertung probabilistischer Vorhersagen;
-- Expected Calibration Error oder Reliability Bins;
-- Coverage: Anteil der Fälle oberhalb eines Automatisierungsschwellenwerts;
-- Selective Accuracy: Genauigkeit nur der automatisch bearbeiteten Fälle.
-
-MLflow speichert Datensatzversion, Prompt-/Modellversion, Schwellenwert, Metriken und Artefakte. So wird sichtbar, ob ein höherer Confidence-Wert tatsächlich häufiger mit korrekten Entscheidungen verbunden ist.
-
-### Coding-Ziel
-
-Du führst den strukturierten Agenten über ein Golden Test Set aus, berechnest Metriken, visualisierst Kalibrierungs-Bins als Artefakt und vergleichst mindestens zwei Confidence-Schwellen.
-
----
-
-## Block 4 – Guardrails
-
-### Fachlicher Fokus
-
-Guardrails werden an mehreren Stellen benötigt:
-
-1. **Input:** Prompt Injection, unzulässige Inhalte und übergroße Eingaben erkennen.
-2. **Output:** Schema, sensible Daten und fachlich unerlaubte Aussagen prüfen.
-3. **Action:** Aktionen abhängig von Risiko, Confidence und Berechtigung erlauben.
-
-Confidence allein ist kein Sicherheitsmechanismus. Kritische Aktionen benötigen unabhängig davon eine Allowlist, Business Rules oder Human Approval.
-
-### Coding-Ziel
-
-Du ergänzt eine Policy mit den Ergebnissen `allow`, `human_review` und `block`. Geblockte Anfragen dürfen kein Tool erreichen. Unsichere Fälle werden kontrolliert an Menschen übergeben.
-
----
-
-## Block 5 – MCP und Tool Calling mit Validierung
-
-### Fachlicher Fokus
-
-Der Agent erhält Werkzeuge für das Mock-System. Das Übungsdesign verwendet MCP-nahe Tool-Definitionen mit Name, Beschreibung und JSON-Schema. Validiert werden:
-
-- ob das gewählte Tool erlaubt ist;
-- ob Eingabeparameter dem Schema entsprechen;
-- ob der Aufruf in der korrekten Reihenfolge erfolgt;
-- ob das Resultat dem erwarteten Vertrag entspricht;
-- ob Timeout, HTTP-Fehler oder ungültige Rückgaben sicher behandelt werden;
-- ob schreibende Aktionen eine ausreichende Berechtigung besitzen.
-
-### Coding-Ziel
-
-Du implementierst die kontrollierte Kette `get_customer -> create_ticket -> update_ticket_status`. Jeder Übergang wird validiert; der Agent darf keine frei erfundenen Tools oder Parameter ausführen.
+### Abschluss
+- 20 min Wrap-up
+- wichtigste Prinzipien
+- Transfer in reale Projekte
+- typische Anti-Patterns
 
 ---
 
-## Block 6 – Testing und MLflow Tracing
+## Schulungsblöcke und Lernziele
 
-### Fachlicher Fokus
+### Block 1: [`1_agentBaseline/loesung.py`](1_agentBaseline/loesung.py) / [`1_agentBaseline/aufgabe.py`](1_agentBaseline/aufgabe.py)
+- Verstehen, warum Freitext als Systemvertrag gefährlich ist
+- Eigenen Decoder implementieren statt Hilfsfunktion blind zu nutzen
+- Mehrfachläufe vergleichen, um Nichtdeterminismus sichtbar zu machen
 
-Agententests betrachten mehr als den finalen Text:
+### Block 2: [`2_structuredOutput/loesung.py`](2_structuredOutput/loesung.py) / [`2_structuredOutput/aufgabe.py`](2_structuredOutput/aufgabe.py)
+- [`pydantic_ai.Agent`](2_structuredOutput/loesung.py:24) mit typisiertem `output_type` einsetzen
+- [`RunContext`](2_structuredOutput/loesung.py:8) und Dependencies nutzen
+- Output-Validatoren und [`ModelRetry`](2_structuredOutput/aufgabe.py:8) verstehen
 
-- Unit-Tests für Klassifikation, Validierung und Policies;
-- Integrationstests für Tool-Verträge;
-- End-to-End-Tests für den vollständigen Workflow;
-- Failure-, Edge- und Adversarial Cases;
-- Mock-Antworten für reproduzierbare Tests;
-- echte Mock-System-Aufrufe für Integrationssicherheit;
-- Regressionstests für bereits beobachtete Fehler.
+### Block 3: [`3_kalibrierung/loesung.py`](3_kalibrierung/loesung.py) / [`3_kalibrierung/aufgabe.py`](3_kalibrierung/aufgabe.py)
+- Vorhandene Qualitätsmetriken anwenden statt Formeln selbst herzuleiten
+- Vorhersagen gegen Golden Cases vergleichen
+- Ergebnisse mit MLflow dokumentieren und fachlich interpretieren
 
-MLflow Tracing bildet Modellaufruf, Guardrail-Entscheidung, Tool-Auswahl und Tool-Ergebnis als zusammenhängende Spans ab.
+### Block 4: [`4_guardrails/loesung.py`](4_guardrails/loesung.py) / [`4_guardrails/aufgabe.py`](4_guardrails/aufgabe.py)
+- Unsafe-first: zuerst ungeschützte Ausführung beobachten
+- Eingabe-Policies und Guardrail-Klassen implementieren
+- Sichere Ablehnung statt stiller Fehlverarbeitung umsetzen
 
-### Coding-Ziel
+### Block 5: [`5_mcpToolCalling/loesung.py`](5_mcpToolCalling/loesung.py) / [`5_mcpToolCalling/aufgabe.py`](5_mcpToolCalling/aufgabe.py)
+- Agenten-Tools mit [`@agent.tool`](5_mcpToolCalling/loesung.py:28) definieren
+- Rollen, Tool-Schemas und Response-Validierung absichern
+- Einen Workflow gegen [`mock_system.py`](mock_system.py) automatisieren
 
-Du vervollständigst eine Testsuite und ergänzt Trace-Metadaten, sodass ein fehlgeschlagener Agentenpfad fachlich und technisch nachvollziehbar wird.
+### Block 6: [`6_testingTracing/loesung.py`](6_testingTracing/loesung.py) / [`6_testingTracing/aufgabe.py`](6_testingTracing/aufgabe.py)
+- Fehler reproduzieren und regressionstauglich absichern
+- Fakes statt echter Services in Tests verwenden
+- Runs mit [`@mlflow.trace`](6_testingTracing/loesung.py:57) nachvollziehbar machen
 
----
-
-## Block 7 – Production Observability, QS und Continuous Validation
-
-### Fachlicher Fokus
-
-Qualität endet nicht mit dem Deployment. Überwacht werden unter anderem:
-
-- Erfolgs- und Fehlerquote;
-- Validierungs- und Guardrail-Abweisungen;
-- Human-Handoff-Rate;
-- Qualitätswerte auf Stichproben;
-- Confidence-Verteilung und Calibration Drift;
-- Latenz, Timeout-Rate, Tokenverbrauch und Kosten;
-- Änderungen an Modell, Prompt, Tools, Knowledge Base und Software.
-
-Produktionsfehler werden anonymisiert und als neue Regression Cases versioniert. Release Gates verhindern ein Deployment, wenn definierte Qualitäts-, Sicherheits-, Kosten- oder Performancegrenzen unterschritten werden.
-
-### Coding-Ziel
-
-Du aggregierst Produktionsereignisse, protokollierst Kennzahlen in MLflow und implementierst ein automatisches Release Gate mit verständlichem Fehlerbericht.
+### Block 7: [`7_productionValidation/loesung.py`](7_productionValidation/loesung.py) / [`7_productionValidation/aufgabe.py`](7_productionValidation/aufgabe.py)
+- Produktionsmetriken aggregieren
+- Release Gates definieren
+- Schlechte Qualität automatisiert erkennen und Deployments stoppen
 
 ---
 
-## Projektstruktur
+## Mock-System
+Das Mock-System in [`mock_system.py`](mock_system.py) stellt mindestens diese Endpunkte bereit:
+- [`GET /customer/{customer_id}`](mock_system.py)
+- [`POST /tickets`](mock_system.py)
+- [`PUT /tickets/{ticket_id}/status`](mock_system.py)
+- [`GET /tickets`](mock_system.py)
 
-```text
-training_lib/                  Gemeinsame Agenten- und QS-Bibliothek
-mock_system.py                 Deterministisches Zielsystem
-1_agentBaseline/               Raw-Text-Agent und erste Ausführung
-2_structuredOutput/            Erzwungene strukturierte Ausgabe
-3_kalibrierung/                Confidence-Metriken und MLflow
-4_guardrails/                  Input-, Output- und Action-Policies
-5_mcpToolCalling/              Validierte MCP-/Tool-Kette
-6_testingTracing/              Tests und MLflow Traces
-7_productionValidation/        Observability und Release Gates
-.vscode/launch.json            Gemeinsame Startkonfiguration
-```
+Damit kannst du realistische Tool-Aufrufe, Validierung, Berechtigungen und Seiteneffekte trainieren.
 
-## Installation und Start
+---
 
-```bash
-python -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/uvicorn mock_system:app --reload
-```
+## MLflow in der Schulung
+MLflow wird in den Blöcken für Evaluation, Tracing und Production Validation verwendet:
+- Experimente für verschiedene Prompt-/Agent-Versionen
+- Logging von Qualitätsmetriken
+- Traces für Agent- und Tool-Läufe
+- Artefakte wie Eval-Reports oder Production-Snapshots
 
-In einem separaten Terminal:
-
-```bash
-.venv/bin/mlflow server --host 127.0.0.1 --port 5000
-.venv/bin/python 1_agentBaseline/aufgabe.py
-```
-
-Alternativ werden Mock-System, MLflow, Lösungen und Aufgaben über `.vscode/launch.json` gestartet. Der vorkonfigurierte lokale Modelladapter benötigt keinen API-Key und simuliert gezielt typische LLM-Variationen.
-
-## Definition of Done
-
-Für jeden Block gilt:
-
-- `loesung.py` ist vollständig und wurde vor `aufgabe.py` erstellt;
-- `aufgabe.py` ist ein Python-Lückentext mit klar markierten Arbeitsstellen;
-- die Übung adressiert genau eine Person;
-- Erfolg und mindestens ein relevanter Fehlerfall sind ausführbar;
-- die neue Qualitätsschicht baut auf dem vorherigen Agentenstand auf;
-- MLflow wird ab der Kalibrierung für Runs, Metriken, Artefakte oder Traces genutzt.
+Damit entsteht nicht nur Demo-Code, sondern ein nachvollziehbarer QS-Workflow.

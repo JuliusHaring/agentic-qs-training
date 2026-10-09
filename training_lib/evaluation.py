@@ -1,57 +1,85 @@
-"""Klassische Metriken für Qualität und Confidence-Kalibrierung."""
+"""Versionierte Referenzfälle und fertige Metriken für die Schulung."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .models import Category
+from .domain import Category
 
 
 @dataclass(frozen=True)
 class EvaluationCase:
+    case_id: str
     customer_id: str
     message: str
     expected_category: Category
 
 
-GOLDEN_CASES = [
-    EvaluationCase("C123", "Meine Rechnung enthält einen falschen Betrag", "billing"),
-    EvaluationCase("C456", "Die Zahlung wurde doppelt abgebucht", "billing"),
-    EvaluationCase("C123", "Login funktioniert wegen eines Fehlers nicht", "technical"),
-    EvaluationCase("C456", "Dringend: vollständiger API-Ausfall", "technical"),
-    EvaluationCase("C123", "Ich möchte meine Adresse ändern", "general"),
-    EvaluationCase("C456", "Welche Öffnungszeiten gelten heute?", "general"),
-]
+GOLDEN_CASES = (
+    EvaluationCase("billing-01", "C123", "Meine Rechnung enthält einen falschen Betrag", Category.BILLING),
+    EvaluationCase("billing-02", "C456", "Die Zahlung wurde doppelt abgebucht", Category.BILLING),
+    EvaluationCase("technical-01", "C123", "Mein Login funktioniert wegen eines Fehlers nicht", Category.TECHNICAL),
+    EvaluationCase("technical-02", "C456", "Dringend: vollständiger API-Ausfall", Category.TECHNICAL),
+    EvaluationCase("general-01", "C123", "Ich möchte meine Adresse ändern", Category.GENERAL),
+    EvaluationCase("general-02", "C456", "Welche Öffnungszeiten gelten heute?", Category.GENERAL),
+)
 
 
-def calibration_metrics(labels: list[bool], confidences: list[float], threshold: float) -> dict[str, float]:
-    if not labels or len(labels) != len(confidences):
-        raise ValueError("Labels und Confidences müssen gleich lang und nicht leer sein")
-    predicted_positive = [score >= threshold for score in confidences]
-    tp = sum(pred and label for pred, label in zip(predicted_positive, labels))
-    fp = sum(pred and not label for pred, label in zip(predicted_positive, labels))
-    fn = sum(not pred and label for pred, label in zip(predicted_positive, labels))
-    accuracy = sum(labels) / len(labels)
-    precision = tp / (tp + fp) if tp + fp else 0.0
-    recall = tp / (tp + fn) if tp + fn else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    brier = sum((score - float(label)) ** 2 for score, label in zip(confidences, labels)) / len(labels)
-    selected = [label for label, selected in zip(labels, predicted_positive) if selected]
-    return {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "brier_score": brier,
-        "coverage": len(selected) / len(labels),
-        "selective_accuracy": sum(selected) / len(selected) if selected else 0.0,
-    }
+class MetricLibrary:
+    def accuracy(self, predictions: list[bool]) -> float:
+        return sum(predictions) / len(predictions) if predictions else 0.0
+
+    def brier_score(self, predictions: list[tuple[bool, float]]) -> float:
+        if not predictions:
+            return 0.0
+        return sum((confidence - (1.0 if correct else 0.0)) ** 2 for correct, confidence in predictions) / len(predictions)
+
+    def coverage(self, confidences: list[float], threshold: float) -> float:
+        return sum(value >= threshold for value in confidences) / len(confidences) if confidences else 0.0
+
+    def selective_accuracy(self, predictions: list[tuple[bool, float]], threshold: float) -> float:
+        selected = [correct for correct, confidence in predictions if confidence >= threshold]
+        return sum(selected) / len(selected) if selected else 0.0
+
+    def review_rate(self, actions: list[str]) -> float:
+        return sum(action == 'human_review' for action in actions) / len(actions) if actions else 0.0
+
+    def error_rate(self, flags: list[bool]) -> float:
+        return sum(flags) / len(flags) if flags else 0.0
+
+    def mean_cost(self, costs: list[float]) -> float:
+        return sum(costs) / len(costs) if costs else 0.0
+
+    def p95_latency_ms(self, latencies: list[float]) -> float:
+        if not latencies:
+            return 0.0
+        ordered = sorted(latencies)
+        index = max(0, min(len(ordered) - 1, int(len(ordered) * 0.95 + 0.999999) - 1))
+        return ordered[index]
+
+    def reliability_bins(self, predictions: list[tuple[bool, float]], bins: int = 5) -> list[dict[str, float]]:
+        if not predictions or bins < 1:
+            return []
+        results: list[dict[str, float]] = []
+        for index in range(bins):
+            lower = index / bins
+            upper = (index + 1) / bins
+            if index == bins - 1:
+                bucket = [(correct, confidence) for correct, confidence in predictions if lower <= confidence <= upper]
+            else:
+                bucket = [(correct, confidence) for correct, confidence in predictions if lower <= confidence < upper]
+            if not bucket:
+                continue
+            accuracy = sum(correct for correct, _ in bucket) / len(bucket)
+            avg_confidence = sum(confidence for _, confidence in bucket) / len(bucket)
+            results.append({
+                'lower': lower,
+                'upper': upper,
+                'count': float(len(bucket)),
+                'accuracy': accuracy,
+                'avg_confidence': avg_confidence,
+                'gap': abs(avg_confidence - accuracy),
+            })
+        return results
 
 
-def reliability_bins(labels: list[bool], confidences: list[float], bins: int = 5) -> list[dict[str, float]]:
-    result = []
-    for index in range(bins):
-        lower, upper = index / bins, (index + 1) / bins
-        values = [(label, score) for label, score in zip(labels, confidences) if lower <= score <= upper and (index == bins - 1 or score < upper)]
-        if values:
-            result.append({"lower": lower, "upper": upper, "count": len(values), "mean_confidence": sum(v[1] for v in values) / len(values), "accuracy": sum(v[0] for v in values) / len(values)})
-    return result
+METRIC_LIBRARY = MetricLibrary()

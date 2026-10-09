@@ -1,24 +1,19 @@
-# Aufgabe 5: MCP und Tool Calling validieren
+# Aufgabe 5: PydanticAI Tools und MCP-nahe Verträge
 
-## Ziel
-Du verbindest den abgesicherten Agenten über schema-validierte Tools mit dem Mock-System.
+## Produktionskontext
+PydanticAI generiert Tool-Schemas aus Signaturen. Runtime-Abhängigkeiten, Identität und Transport werden über `RunContext` injiziert.
+
+## Arbeitsauftrag – 45 Minuten
+1. **Agent Setup (8 Min.):** Konfiguriere typisierten Agent, Dependencies, Retries und Tool Timeout.
+2. **Read Tool (10 Min.):** Registriere `get_customer`; validiere Transport und Response, schreibe Auditdaten.
+3. **Write Tool (15 Min.):** Registriere `create_ticket`; prüfe Rolle, Input, Response und Customer-Isolation. Nutze `ModelRetry` nur für reparierbare Fehler.
+4. **Run Boundary (5 Min.):** Führe Agent und Tools mit denselben Dependencies aus.
+5. **Failure Tests (7 Min.):** Prüfe fehlende Rolle, Timeout, fremde Customer-ID und ungültige Tool-Rückgabe.
 
 ## Vorbereitung
-Starte `mock_system.py` oder die Launch-Konfiguration **00 - Mock-System**.
-
-## Auftrag
-1. Untersuche die MCP-nahen Definitionen in `TOOL_SCHEMAS`.
-2. Implementiere die Reihenfolge `get_customer`, `create_ticket`, `update_ticket_status`.
-3. Übergib ausschließlich validierte Argumente.
-4. Nutze ausschließlich validierte Tool-Rückgaben.
-5. Probiere zusätzlich eine ungültige Kunden-ID, ein unbekanntes Tool und einen ungültigen Status aus.
-
-## Reflexion
-- Was muss vor und nach einem Tool Call geprüft werden?
-- Weshalb genügt die Entscheidung des LLM über den Tool-Namen nicht?
-- Welche Timeouts, Retries und Berechtigungen wären in Produktion erforderlich?
+Starte das Mock-System. Die Lösung verwendet ein lokales PydanticAI `TestModel`, damit Tool Calls reproduzierbar bleiben.
 
 ## Akzeptanzkriterien
-- Der Happy Path erzeugt und aktualisiert genau ein Ticket.
-- Ungültige Parameter werden vor dem HTTP-Aufruf abgewiesen.
-- Unbekannte Tools werden nicht ausgeführt.
+- Tools erhalten Runtime-Daten ausschließlich über `RunContext`.
+- Input und Response werden validiert.
+- Least Privilege und Mandantentrennung werden erzwungen.
