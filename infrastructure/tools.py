@@ -1,0 +1,147 @@
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic_ai import Tool
+
+from infrastructure import customs_sdk, logistics_sdk
+
+
+def _error_result(error: Exception, **context: object) -> dict[str, object]:
+    return {"ok": False, "error": str(error), **context}
+
+
+def list_packages() -> list[dict[str, object]] | dict[str, object]:
+    try:
+        return logistics_sdk.list_packages()
+    except Exception as error:
+        return _error_result(error)
+
+
+def write_customs_details(
+    package_id: int,
+    content_description: str,
+    hs_code: str,
+    origin_country: str,
+) -> dict[str, object]:
+    try:
+        return logistics_sdk.write_customs_details(
+            package_id,
+            content_description,
+            hs_code,
+            origin_country,
+        )
+    except Exception as error:
+        return _error_result(error, package_id=package_id)
+
+
+def move_to_freight(package_ids: list[int]) -> dict[str, object]:
+    try:
+        return logistics_sdk.move_to_freight(package_ids)
+    except Exception as error:
+        return _error_result(error, package_ids=package_ids)
+
+
+def load_content_descriptions(items: list[dict[str, str]]) -> dict[str, object]:
+    try:
+        return customs_sdk.load_content_descriptions(items)
+    except Exception as error:
+        return _error_result(error)
+
+
+def list_content_descriptions() -> list[dict[str, str]] | dict[str, object]:
+    try:
+        return customs_sdk.list_content_descriptions()
+    except Exception as error:
+        return _error_result(error)
+
+
+def get_customs_book() -> dict[str, Any]:
+    try:
+        return customs_sdk.get_customs_book()
+    except Exception as error:
+        return _error_result(error)
+
+
+def get_hs_code_dictionary() -> dict[str, Any]:
+    try:
+        return customs_sdk.get_hs_code_dictionary()
+    except Exception as error:
+        return _error_result(error)
+
+
+def create_customs_declaration(
+    package_ref: str,
+    content_description: str,
+    destination_country: str,
+    value_amount: float,
+    customs_book_entry: str,
+) -> dict[str, object]:
+    try:
+        return customs_sdk.create_customs_declaration(
+            package_ref,
+            content_description,
+            destination_country,
+            value_amount,
+            customs_book_entry,
+        )
+    except Exception as error:
+        return _error_result(error, package_ref=package_ref)
+
+
+def list_customs_declarations() -> list[dict[str, object]] | dict[str, object]:
+    try:
+        return customs_sdk.list_customs_declarations()
+    except Exception as error:
+        return _error_result(error)
+
+
+SHIPMENT_TOOLS = [
+    Tool(
+        list_packages,
+        name="list_packages",
+        description="List all packages currently known to logistics, including status and customs details.",
+    ),
+    Tool(
+        write_customs_details,
+        name="write_customs_details",
+        description="Attach customs details to a package in logistics using package_id, content_description, hs_code, and origin_country.",
+    ),
+    Tool(
+        move_to_freight,
+        name="move_to_freight",
+        description="Move packages into freight after all customs work is complete. Input is a list of numeric package IDs.",
+    ),
+    Tool(
+        load_content_descriptions,
+        name="load_content_descriptions",
+        description="Load missing package content descriptions into customs. Input is a list of items with package_ref and content_description.",
+    ),
+    Tool(
+        list_content_descriptions,
+        name="list_content_descriptions",
+        description="List all package content descriptions currently loaded in customs.",
+    ),
+    Tool(
+        get_customs_book,
+        name="get_customs_book",
+        description="Get the valid customs book entries for declarations.",
+    ),
+    Tool(
+        get_hs_code_dictionary,
+        name="get_hs_code_dictionary",
+        description="Get HS code classification guidance.",
+    ),
+    Tool(
+        create_customs_declaration,
+        name="create_customs_declaration",
+        description="Create one missing customs declaration using package_ref, content_description, destination_country, value_amount, and a valid customs_book_entry.",
+    ),
+    Tool(
+        list_customs_declarations,
+        name="list_customs_declarations",
+        description="List all customs declarations that have already been created.",
+    ),
+]
+
+__all__ = ["SHIPMENT_TOOLS"]
