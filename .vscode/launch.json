@@ -1,0 +1,126 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "00 - Mock-System",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["mock_system:app", "--host", "127.0.0.1", "--port", "8000", "--reload"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "00 - MLflow Server",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "mlflow",
+      "args": ["server", "--host", "127.0.0.1", "--port", "5000"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "01 - Aufgabe: Basaler Agent",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/1_agentBaseline/aufgabe.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "01 - Lösung: Basaler Agent",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/1_agentBaseline/loesung.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "02 - Aufgabe: Structured Output",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/2_structuredOutput/aufgabe.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "02 - Lösung: Structured Output",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/2_structuredOutput/loesung.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "03 - Aufgabe: Kalibrierung",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/3_kalibrierung/aufgabe.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "03 - Lösung: Kalibrierung",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/3_kalibrierung/loesung.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "04 - Aufgabe: Guardrails",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/4_guardrails/aufgabe.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "04 - Lösung: Guardrails",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/4_guardrails/loesung.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "05 - Aufgabe: MCP Tool Calling",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/5_mcpToolCalling/aufgabe.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "05 - Lösung: MCP Tool Calling",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/5_mcpToolCalling/loesung.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "06 - Aufgabe: Testing und Tracing",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/6_testingTracing/aufgabe.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "06 - Lösung: Testing und Tracing",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/6_testingTracing/loesung.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "07 - Aufgabe: Production Validation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/7_productionValidation/aufgabe.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "07 - Lösung: Production Validation",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/7_productionValidation/loesung.py",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Workshop-Infrastruktur starten",
+      "configurations": ["00 - Mock-System", "00 - MLflow Server"],
+      "stopAll": true
+    }
+  ]
+}
