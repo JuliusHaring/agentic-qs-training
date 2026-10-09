@@ -1,21 +1,16 @@
-# Aufgabe 4: Guardrails ergänzen
+# Aufgabe 4: Guardrails um einen PydanticAI-Agenten
 
-## Ziel
-Du kontrollierst Eingaben, Modellentscheidungen und geplante Aktionen vor der Tool-Ausführung.
+## Produktionskontext
+Guardrails sind nicht bloß eine Hilfsfunktion. Du implementierst eine Policy-Schicht vor dem Agent Run und einen PydanticAI Output Validator innerhalb des Runs.
 
-## Auftrag
-1. Werte für jeden Request `evaluate_guardrails()` aus.
-2. Mappe die Policy-Ergebnisse auf `allowed`, `pending_approval` und `blocked`.
-3. Stelle sicher, dass blockierte oder freigabepflichtige Fälle keine Aktion auslösen.
-4. Teste einen normalen, einen unsicheren und einen Prompt-Injection-Fall.
-5. Vergleiche deine Implementierung anschließend mit `loesung.py`.
-
-## Reflexion
-- Warum ist Confidence kein ausreichender Security Guardrail?
-- Welche Aktionen benötigen unabhängig von Confidence eine Freigabe?
-- Wo sollten Input-, Output- und Action-Guardrails liegen?
+## Arbeitsauftrag – 45 Minuten
+1. **Policy Contract (10 Min.):** Implementiere das Input Guardrail mit begründeten `allow`-/`block`-Entscheidungen.
+2. **Agent Composition (10 Min.):** Konfiguriere den Agent mit Dependencies, Output Type und Retry-Verhalten.
+3. **Output-/Action-Policy (10 Min.):** Nutze `RunContext` für Confidence-Schwelle und Audit. Markiere unsichere oder hoch priorisierte Fälle für Human Review.
+4. **Orchestrierung (10 Min.):** Stelle sicher, dass blockierte Inputs niemals den Modellprovider erreichen und mappe alle Zustände konsistent.
+5. **Adversarial Review (5 Min.):** Ergänze Varianten für indirekte Injection und diskutiere False Positives.
 
 ## Akzeptanzkriterien
-- Injection wird blockiert.
-- Hohe Priorität oder geringe Confidence führt zu Human Review.
-- Nur erlaubte Fälle dürfen später Tools erreichen.
+- Input Policy läuft zwingend vor dem Modell.
+- Output Policy ist über PydanticAI registriert.
+- Block, Human Review und Completion sind auditierbar.

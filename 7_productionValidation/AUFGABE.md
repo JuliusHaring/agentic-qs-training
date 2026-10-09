@@ -1,21 +1,16 @@
-# Aufgabe 7: Production Validation und Release Gate
+# Aufgabe 7: Production Validation und SLO Release Gate
 
-## Ziel
-Du leitest aus Produktionssignalen messbare Qualitätsgrenzen und eine automatisierte Release-Entscheidung ab.
+## Produktionskontext
+Nach dem Deployment werden Agentenereignisse aggregiert. Ein austauschbarer `QualityGate` entscheidet anhand versionierter SLOs über den Release.
 
-## Auftrag
-1. Aggregiere Accuracy, Brier Score, Error Rate, p95-Latenz und mittlere Kosten aus `EVENTS`.
-2. Wende `release_gate()` auf die Metriken an.
-3. Logge Modell-, Release- und Datensatzversion sowie alle Metriken in MLflow.
-4. Speichere die Gate-Verletzungen als Artefakt und setze einen Status-Tag.
-5. Beende den Prozess bei einem fehlgeschlagenen Gate mit Exit-Code 1.
-
-## Reflexion
-- Welche Metriken benötigen Alerting und welche ein hartes Release Gate?
-- Wie werden anonymisierte Produktionsfehler zu Regression Cases?
-- Wie erkennst du Calibration-, Qualitäts- und Kostendrift?
+## Arbeitsauftrag – 45 Minuten
+1. **Aggregation (15 Min.):** Implementiere Accuracy, Brier Score, Error-/Review-Rate, nearest-rank p95 und mittlere Kosten. Weise leere Samples zurück.
+2. **SLO Policy (10 Min.):** Implementiere alle deklarativ hinterlegten Grenzwerte. Fehlende Metriken müssen fail closed behandeln.
+3. **Application Service (10 Min.):** Orchestriere Aggregation, Gate und injizierte Telemetrie.
+4. **MLflow (5 Min.):** Logge Release-, Modell-, Prompt- und Datensatzversion sowie das Gate-Artefakt.
+5. **Production Loop (5 Min.):** Skizziere, wie ein anonymisierter Fehlerfall in das Golden Set und in Block 6 zurückfließt.
 
 ## Akzeptanzkriterien
-- Die Produktionsmetriken werden reproduzierbar berechnet.
-- Ein fehlgeschlagenes Gate nennt konkrete Grenzwertverletzungen.
-- Runs enthalten nachvollziehbare Versionsinformationen.
+- Berechnung und Policy sind getrennte Klassen.
+- Gate-Verletzungen enthalten Istwert, Operator und Grenzwert.
+- Das Programm liefert bei einem fehlgeschlagenen Gate Exit-Code 1.

@@ -1,4 +1,4 @@
-"""Referenzlösung 7: Produktionssignale aggregieren und Release Gate anwenden."""
+"""Block 7 solution: production aggregation, SLO policies, and release decision."""
 from __future__ import annotations
 
 import json
@@ -6,46 +6,61 @@ import statistics
 import sys
 from pathlib import Path
 
-import mlflow
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from training_lib import configure_mlflow, release_gate
-
-EVENTS = [
-    {"correct": True, "confidence": 0.92, "latency_ms": 410, "error": False, "cost": 0.002},
-    {"correct": True, "confidence": 0.83, "latency_ms": 520, "error": False, "cost": 0.002},
-    {"correct": True, "confidence": 0.77, "latency_ms": 680, "error": False, "cost": 0.003},
-    {"correct": False, "confidence": 0.74, "latency_ms": 890, "error": False, "cost": 0.003},
-    {"correct": True, "confidence": 0.90, "latency_ms": 460, "error": False, "cost": 0.002},
-    {"correct": True, "confidence": 0.87, "latency_ms": 610, "error": False, "cost": 0.002},
-]
+from training_lib import MlflowTelemetry, ProductionEvent, QualityGate, TelemetryPort
 
 
-def aggregate(events: list[dict[str, float | bool]]) -> dict[str, float]:
-    latencies = sorted(float(event["latency_ms"]) for event in events)
-    p95_index = max(0, round(0.95 * len(latencies)) - 1)
-    labels = [float(bool(event["correct"])) for event in events]
-    confidences = [float(event["confidence"]) for event in events]
-    return {
-        "accuracy": statistics.mean(labels),
-        "brier_score": statistics.mean((confidence - label) ** 2 for confidence, label in zip(confidences, labels)),
-        "error_rate": statistics.mean(float(bool(event["error"])) for event in events),
-        "p95_latency_ms": latencies[p95_index],
-        "mean_cost": statistics.mean(float(event["cost"]) for event in events),
-    }
+class ProductionMetricsService:
+    def aggregate(self, events: list[ProductionEvent]) -> dict[str, float]:
+        if not events:
+            raise ValueError("Production sample must not be empty")
+        latencies = sorted(event.latency_ms for event in events)
+        p95_index = min(len(latencies) - 1, max(0, int(0.95 * len(latencies) + 0.999999) - 1))
+        return {
+            "accuracy": statistics.mean(float(event.correct) for event in events),
+            "brier_score": statistics.mean((event.confidence - float(event.correct)) ** 2 for event in events),
+            "error_rate": statistics.mean(float(event.error) for event in events),
+            "human_review_rate": statistics.mean(float(event.guardrail_action == "human_review") for event in events),
+            "p95_latency_ms": latencies[p95_index],
+            "mean_cost": statistics.mean(event.estimated_cost for event in events),
+        }
+
+
+class ProductionQualityGate(QualityGate):
+    limits = {"accuracy": (">=", 0.80), "brier_score": ("<=", 0.20), "error_rate": ("<=", 0.05), "p95_latency_ms": ("<=", 2_000.0), "mean_cost": ("<=", 0.01)}
+
+    def evaluate(self, metrics: dict[str, float]) -> list[str]:
+        failures = []
+        for metric, (operator, limit) in self.limits.items():
+            actual = metrics.get(metric)
+            if actual is None or (operator == ">=" and actual < limit) or (operator == "<=" and actual > limit):
+                failures.append(f"{metric} must be {operator} {limit}, actual={actual}")
+        return failures
+
+
+class ProductionValidator:
+    def __init__(self, metrics_service: ProductionMetricsService, gate: QualityGate, telemetry: TelemetryPort) -> None:
+        self.metrics_service, self.gate, self.telemetry = metrics_service, gate, telemetry
+
+    def validate(self, events: list[ProductionEvent], release: str) -> tuple[dict[str, float], list[str]]:
+        metrics = self.metrics_service.aggregate(events)
+        failures = self.gate.evaluate(metrics)
+        with self.telemetry.run("production-validation", {"release": release, "model_version": "local-v2", "prompt_version": "v3", "dataset_version": "production-sample-v1"}):
+            self.telemetry.metrics(metrics)
+            self.telemetry.artifact({"failures": failures}, "quality_gate.json")
+        return metrics, failures
 
 
 def main() -> None:
-    metrics = aggregate(EVENTS)
-    failures = release_gate(metrics)
-    configure_mlflow("ai-automation-production")
-    with mlflow.start_run(run_name="release-candidate-v2"):
-        mlflow.log_params({"release": "v2", "model_version": "local-v1", "dataset_version": "production-sample-v1"})
-        mlflow.log_metrics(metrics)
-        mlflow.log_dict({"failures": failures}, "release_gate.json")
-        mlflow.set_tag("release_gate", "failed" if failures else "passed")
-    print(json.dumps({"metrics": metrics, "release_gate": "failed" if failures else "passed", "failures": failures}, indent=2))
+    raw_events = [
+        (True, .92, 410, False, "allow", .002), (True, .83, 520, False, "allow", .002),
+        (True, .77, 680, False, "human_review", .003), (False, .74, 890, False, "human_review", .003),
+        (True, .90, 460, False, "allow", .002), (True, .87, 610, False, "allow", .002),
+    ]
+    events = [ProductionEvent(correct=a, confidence=b, latency_ms=c, error=d, guardrail_action=e, estimated_cost=f) for a, b, c, d, e, f in raw_events]
+    metrics, failures = ProductionValidator(ProductionMetricsService(), ProductionQualityGate(), MlflowTelemetry("ai-automation-production")).validate(events, "v2")
+    print(json.dumps({"metrics": metrics, "gate": "failed" if failures else "passed", "failures": failures}, indent=2))
     if failures:
         raise SystemExit(1)
 

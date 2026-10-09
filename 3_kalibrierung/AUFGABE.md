@@ -1,21 +1,15 @@
-# Aufgabe 3: Confidence kalibrieren
+# Aufgabe 3: Confidence-Kalibrierungsservice
 
-## Ziel
-Du prüfst, ob die ausgegebene Sicherheit mit der tatsächlichen Korrektheit zusammenhängt.
+## Produktionskontext
+Der typisierte Confidence-Wert ist noch keine verlässliche Wahrscheinlichkeit. Du baust einen eigenständigen Evaluationsservice und implementierst die Statistik selbst.
 
-## Auftrag
-1. Führe den strukturierten Agenten über `GOLDEN_CASES` aus.
-2. Erfasse pro Fall Korrektheit und Confidence.
-3. Berechne Accuracy, Precision, Recall, F1, Brier Score, Coverage und Selective Accuracy für Schwellen von 0,70 und 0,85.
-4. Erzeuge Reliability Bins.
-5. Logge Datensatzversion, Modellversion, Schwelle, Metriken und Bins in MLflow.
-
-## Reflexion
-- Ist ein hoher Confidence-Wert tatsächlich verlässlich?
-- Wie verändern sich Coverage und Selective Accuracy mit der Schwelle?
-- Welche Schwelle würdest du für automatische Bearbeitung wählen?
+## Arbeitsauftrag – 45 Minuten
+1. **Prediction Pipeline (10 Min.):** Führe den PydanticAI-Agenten mit `SupportDependencies` über alle Golden Cases aus und bewahre Case-ID, Korrektheit und Confidence auf.
+2. **ML-Metriken (15 Min.):** Implementiere Accuracy, Precision, Recall, F1, Brier Score, Coverage und Selective Accuracy ohne fertige Projekt-Hilfsmethode.
+3. **Kalibrierung (10 Min.):** Bilde Reliability Bins und berechne Expected Calibration Error. Behandle leere Selektionen und Grenzwerte explizit.
+4. **MLflow (10 Min.):** Logge Versionen, Schwellen, Metriken, Einzelvorhersagen und Bins über den injizierten `TelemetryPort`.
 
 ## Akzeptanzkriterien
-- Beide Schwellen werden vergleichbar ausgewertet.
-- Alle Metriken erscheinen in MLflow.
-- Reliability Bins werden als Artefakt gespeichert.
+- Schwellen 0,70 und 0,85 sind vergleichbar.
+- Division durch null und ungültige Schwellen sind kontrolliert.
+- Evaluation ist vom Telemetrieadapter entkoppelt und testbar.
