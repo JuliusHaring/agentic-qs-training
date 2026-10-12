@@ -90,12 +90,12 @@ def _workflow_state() -> dict[str, Any]:
     packages = logistics_sdk.list_packages()
     descriptions = customs_sdk.list_content_descriptions()
     declarations = customs_sdk.list_customs_declarations()
-    descriptions_by_ref = {
-        str(item["package_ref"]): item for item in descriptions
-    }
+    descriptions_by_ref = {str(item["package_ref"]): item for item in descriptions}
     declarations_by_ref: dict[str, list[dict[str, Any]]] = {}
     for declaration in declarations:
-        declarations_by_ref.setdefault(str(declaration["package_ref"]), []).append(declaration)
+        declarations_by_ref.setdefault(str(declaration["package_ref"]), []).append(
+            declaration
+        )
 
     rows: list[dict[str, Any]] = []
     for package in packages:
@@ -112,7 +112,8 @@ def _workflow_state() -> dict[str, Any]:
         )
         content_description_correct = (
             loaded_description is not None
-            and loaded_description.get("content_description") == truth["content_description"]
+            and loaded_description.get("content_description")
+            == truth["content_description"]
         )
         declaration_correct = len(package_declarations) == 1 and all(
             package_declarations[0].get(field) == truth[field]
@@ -190,7 +191,11 @@ def evaluate_run(
 
     precision = len(correctly_identified) / len(mentioned_set) if mentioned_set else 0.0
     recall = len(correctly_identified) / len(expected_set) if expected_set else 1.0
-    f1 = 0.0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
+    f1 = (
+        0.0
+        if precision + recall == 0
+        else 2 * precision * recall / (precision + recall)
+    )
 
     final_state = _workflow_state()
     rows_by_id = {int(row["package_id"]): row for row in final_state["rows"]}
@@ -204,9 +209,13 @@ def evaluate_run(
     )
     incomplete_package_ids = sorted(expected_set - set(completed_package_ids))
     workflow_completion = (
-        len(completed_package_ids) / len(expected_package_ids) if expected_package_ids else 1.0
+        len(completed_package_ids) / len(expected_package_ids)
+        if expected_package_ids
+        else 1.0
     )
-    missing_required_tools = [name for name in REQUIRED_TOOL_NAMES if name not in seen_tools]
+    missing_required_tools = [
+        name for name in REQUIRED_TOOL_NAMES if name not in seen_tools
+    ]
     final_state["initial_state"] = context.initial_workflow_state
 
     return EvaluationResult(

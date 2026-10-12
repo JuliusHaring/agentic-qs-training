@@ -23,7 +23,9 @@ class PackageCreate(PackageBase):
 
 
 class CustomsDetails(BaseModel):
-    content_description: str = Field(..., min_length=3, examples=["Two laptops and accessories"])
+    content_description: str = Field(
+        ..., min_length=3, examples=["Two laptops and accessories"]
+    )
     hs_code: str = Field(..., min_length=4, examples=["847130"])
     origin_country: str = Field(..., min_length=2, examples=["CN"])
 
@@ -282,12 +284,10 @@ def utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-
 def get_demo_item(package_id: int) -> dict[str, object]:
     if package_id < 1:
         raise DomainError("Package not found")
     return deepcopy(DEMO_ITEMS[(package_id - 1) % len(DEMO_ITEMS)])
-
 
 
 def get_demo_package_truth(package_id: int) -> dict[str, object]:
@@ -316,7 +316,6 @@ def get_demo_package_truth(package_id: int) -> dict[str, object]:
         "customs_book_entry": item["customs_book_entry"],
         "description": description,
     }
-
 
 
 def create_demo_store(package_count: int = 60) -> LogisticsStore:
@@ -356,10 +355,8 @@ def create_demo_store(package_count: int = 60) -> LogisticsStore:
 logistics_store = create_demo_store()
 
 
-
 def logistics_health() -> dict[str, str]:
     return {"status": "ok"}
-
 
 
 def load_packages(payload: LoadPackagesRequest) -> LoadPackagesResponse:
@@ -385,10 +382,8 @@ def load_packages(payload: LoadPackagesRequest) -> LoadPackagesResponse:
     return LoadPackagesResponse(loaded_count=len(created_ids), package_ids=created_ids)
 
 
-
 def list_packages() -> list[PackageRecord]:
     return list(logistics_store.packages.values())
-
 
 
 def get_package(package_id: int) -> PackageRecord:
@@ -396,7 +391,6 @@ def get_package(package_id: int) -> PackageRecord:
     if package is None:
         raise DomainError("Package not found")
     return package
-
 
 
 def write_customs_details(package_id: int, payload: CustomsDetails) -> PackageRecord:
@@ -408,7 +402,6 @@ def write_customs_details(package_id: int, payload: CustomsDetails) -> PackageRe
     package.status = "customs_ready"
     package.updated_at = utc_now()
     return package
-
 
 
 def move_to_freight(payload: PackageIdsRequest) -> FreightMoveResponse:
@@ -425,7 +418,6 @@ def move_to_freight(payload: PackageIdsRequest) -> FreightMoveResponse:
         moved_ids.append(package_id)
 
     return FreightMoveResponse(moved_count=len(moved_ids), package_ids=moved_ids)
-
 
 
 def reset_logistics() -> None:

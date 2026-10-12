@@ -27,7 +27,9 @@ def log_evaluation_to_mlflow(
 
     with mlflow.start_run(run_name=name):
         mlflow.log_param("prompt", prompt)
-        mlflow.log_param("required_tool_names", ",".join(evaluation.required_tool_names))
+        mlflow.log_param(
+            "required_tool_names", ",".join(evaluation.required_tool_names)
+        )
         mlflow.log_param("tool_names_seen", ",".join(evaluation.tool_names_seen))
 
         metrics = {

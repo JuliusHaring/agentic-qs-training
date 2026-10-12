@@ -71,10 +71,16 @@ DEFAULT_CUSTOMS_BOOK = [
 ]
 
 HS_CODE_DICTIONARY = {
-    "1": {"hs_code": "847130", "description": "Laptop computers and portable computers"},
+    "1": {
+        "hs_code": "847130",
+        "description": "Laptop computers and portable computers",
+    },
     "2": {"hs_code": "610910", "description": "Cotton T-shirts"},
     "3": {"hs_code": "090121", "description": "Roasted coffee"},
-    "4": {"hs_code": "846693", "description": "Machine parts for metal-working equipment"},
+    "4": {
+        "hs_code": "846693",
+        "description": "Machine parts for metal-working equipment",
+    },
     "5": {"hs_code": "401512", "description": "Medical gloves"},
     "6": {"hs_code": "870830", "description": "Brake parts and brake pad sets"},
     "7": {"hs_code": "490199", "description": "Printed manuals and technical books"},
@@ -96,7 +102,6 @@ HS_CODE_DICTIONARY = {
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
-
 
 
 def create_demo_store(package_count: int = 60) -> CustomsStore:
@@ -134,13 +139,13 @@ def create_demo_store(package_count: int = 60) -> CustomsStore:
 customs_store = create_demo_store()
 
 
-
 def customs_health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-
-def load_content_descriptions(payload: ContentDescriptionsRequest) -> ContentDescriptionsResponse:
+def load_content_descriptions(
+    payload: ContentDescriptionsRequest,
+) -> ContentDescriptionsResponse:
     refs: list[str] = []
     for item in payload.items:
         customs_store.loaded_descriptions[item.package_ref] = {
@@ -152,20 +157,16 @@ def load_content_descriptions(payload: ContentDescriptionsRequest) -> ContentDes
     return ContentDescriptionsResponse(loaded_count=len(refs), package_refs=refs)
 
 
-
 def list_content_descriptions() -> list[dict[str, str]]:
     return list(customs_store.loaded_descriptions.values())
-
 
 
 def get_customs_book() -> dict[str, list[str]]:
     return {"entries": customs_store.customs_book}
 
 
-
 def get_hs_code_dictionary() -> dict[str, dict[str, str]]:
     return deepcopy(HS_CODE_DICTIONARY)
-
 
 
 def get_ground_truth_for_package(package_id: int) -> dict[str, object]:
@@ -187,29 +188,37 @@ def get_ground_truth_for_package(package_id: int) -> dict[str, object]:
     }
 
 
-
 def evaluate_package_classification(package_id: int) -> dict[str, object]:
     truth = get_ground_truth_for_package(package_id)
     package_ref = str(truth["package_ref"])
 
     loaded_description = customs_store.loaded_descriptions.get(package_ref)
     declaration = next(
-        (record for record in customs_store.declarations.values() if record.package_ref == package_ref),
+        (
+            record
+            for record in customs_store.declarations.values()
+            if record.package_ref == package_ref
+        ),
         None,
     )
 
     actual = {
-        "content_description": loaded_description["content_description"] if loaded_description else None,
+        "content_description": loaded_description["content_description"]
+        if loaded_description
+        else None,
         "destination_country": declaration.destination_country if declaration else None,
         "value_amount": declaration.value_amount if declaration else None,
         "customs_book_entry": declaration.customs_book_entry if declaration else None,
     }
 
     checks = {
-        "content_description": actual["content_description"] == truth["content_description"],
-        "destination_country": actual["destination_country"] == truth["destination_country"],
+        "content_description": actual["content_description"]
+        == truth["content_description"],
+        "destination_country": actual["destination_country"]
+        == truth["destination_country"],
         "value_amount": actual["value_amount"] == truth["value_amount"],
-        "customs_book_entry": actual["customs_book_entry"] == truth["customs_book_entry"],
+        "customs_book_entry": actual["customs_book_entry"]
+        == truth["customs_book_entry"],
     }
 
     return {
@@ -222,10 +231,11 @@ def evaluate_package_classification(package_id: int) -> dict[str, object]:
     }
 
 
-
 def create_customs_declaration(payload: DeclarationRequest) -> DeclareResponse:
     if payload.package_ref not in customs_store.loaded_descriptions:
-        raise DomainError("Package content description must be loaded before declaration")
+        raise DomainError(
+            "Package content description must be loaded before declaration"
+        )
 
     if payload.customs_book_entry not in customs_store.customs_book:
         raise DomainError("Unknown customs book entry")
@@ -242,10 +252,8 @@ def create_customs_declaration(payload: DeclarationRequest) -> DeclareResponse:
     return DeclareResponse(declaration_id=declaration_id, status="declared")
 
 
-
 def list_customs_declarations() -> list[dict[str, object]]:
     return [record.model_dump() for record in customs_store.declarations.values()]
-
 
 
 def reset_customs() -> None:
@@ -257,7 +265,9 @@ class CustomsSDK:
     def health(self) -> dict[str, str]:
         return customs_health()
 
-    def load_content_descriptions(self, items: list[dict[str, str]]) -> dict[str, object]:
+    def load_content_descriptions(
+        self, items: list[dict[str, str]]
+    ) -> dict[str, object]:
         payload = ContentDescriptionsRequest(items=items)
         return load_content_descriptions(payload).model_dump()
 

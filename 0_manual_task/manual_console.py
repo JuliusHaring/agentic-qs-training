@@ -9,12 +9,14 @@ from rich.table import Table
 import typer
 
 from infrastructure import CustomsSDK, LogisticsSDK
-from infrastructure.customs import DEFAULT_CUSTOMS_BOOK, DomainError as CustomsDomainError
+from infrastructure.customs import (
+    DEFAULT_CUSTOMS_BOOK,
+    DomainError as CustomsDomainError,
+)
 from infrastructure.logistics import DomainError as LogisticsDomainError
 
 app = typer.Typer(add_completion=False, help="Shipment processing console")
 console = Console()
-
 
 
 def print_header() -> None:
@@ -28,7 +30,6 @@ def print_header() -> None:
     )
 
 
-
 def get_open_shipments(logistics: LogisticsSDK) -> list[dict[str, object]]:
     return [
         package
@@ -37,10 +38,11 @@ def get_open_shipments(logistics: LogisticsSDK) -> list[dict[str, object]]:
     ]
 
 
-
 def render_queue(packages: list[dict[str, object]], customs: CustomsSDK) -> None:
     loaded_refs = {item["package_ref"] for item in customs.list_content_descriptions()}
-    declared_refs = {item["package_ref"] for item in customs.list_customs_declarations()}
+    declared_refs = {
+        item["package_ref"] for item in customs.list_customs_declarations()
+    }
 
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("No.", style="bold yellow", justify="right")
@@ -74,7 +76,6 @@ def render_queue(packages: list[dict[str, object]], customs: CustomsSDK) -> None
     console.print(table)
 
 
-
 def choose_shipment(logistics: LogisticsSDK, customs: CustomsSDK) -> int:
     packages = get_open_shipments(logistics)
     if not packages:
@@ -88,15 +89,18 @@ def choose_shipment(logistics: LogisticsSDK, customs: CustomsSDK) -> int:
     return int(packages[selection - 1]["id"])
 
 
-
-def show_package_summary(package_id: int, logistics: LogisticsSDK, customs: CustomsSDK) -> dict[str, object]:
+def show_package_summary(
+    package_id: int, logistics: LogisticsSDK, customs: CustomsSDK
+) -> dict[str, object]:
     package = logistics.get_package(package_id)
     package_ref = f"PKG-{package_id}"
     has_description = any(
-        item["package_ref"] == package_ref for item in customs.list_content_descriptions()
+        item["package_ref"] == package_ref
+        for item in customs.list_content_descriptions()
     )
     has_declaration = any(
-        item["package_ref"] == package_ref for item in customs.list_customs_declarations()
+        item["package_ref"] == package_ref
+        for item in customs.list_customs_declarations()
     )
 
     summary = Table(show_header=False, box=None)
@@ -106,9 +110,13 @@ def show_package_summary(package_id: int, logistics: LogisticsSDK, customs: Cust
     summary.add_row("Status", str(package["status"]))
     summary.add_row("Destination", str(package["destination_country"]))
     summary.add_row("Declared value", str(package["declared_value"]))
-    summary.add_row("Customs details", "present" if package["customs_details"] else "missing")
+    summary.add_row(
+        "Customs details", "present" if package["customs_details"] else "missing"
+    )
     summary.add_row("Content in customs", "present" if has_description else "missing")
-    summary.add_row("Declaration in customs", "present" if has_declaration else "missing")
+    summary.add_row(
+        "Declaration in customs", "present" if has_declaration else "missing"
+    )
     summary.add_row("Description", str(package["description"]))
     console.print(summary)
 
@@ -118,7 +126,6 @@ def show_package_summary(package_id: int, logistics: LogisticsSDK, customs: Cust
         "has_description": has_description,
         "has_declaration": has_declaration,
     }
-
 
 
 def show_evaluation_overview(customs: CustomsSDK, package_id: int) -> None:
@@ -155,7 +162,6 @@ def show_evaluation_overview(customs: CustomsSDK, package_id: int) -> None:
     )
 
 
-
 def show_hs_dictionary(customs: CustomsSDK) -> dict[str, dict[str, str]]:
     entries = customs.get_hs_code_dictionary()
     table = Table(show_header=True, header_style="bold magenta")
@@ -168,7 +174,6 @@ def show_hs_dictionary(customs: CustomsSDK) -> dict[str, dict[str, str]]:
     return entries
 
 
-
 def prompt_hs_code(customs: CustomsSDK, default: str = "") -> str:
     entries = customs.get_hs_code_dictionary()
     default_number = next(
@@ -178,13 +183,18 @@ def prompt_hs_code(customs: CustomsSDK, default: str = "") -> str:
 
     while True:
         console.print("\n[bold blue]HS code helper[/bold blue]")
-        console.print("[white]Pick the matching product number from the list below.[/white]")
+        console.print(
+            "[white]Pick the matching product number from the list below.[/white]"
+        )
         show_hs_dictionary(customs)
-        selection = IntPrompt.ask("Enter the helper number", default=int(default_number))
+        selection = IntPrompt.ask(
+            "Enter the helper number", default=int(default_number)
+        )
         if str(selection) in entries:
             return entries[str(selection)]["hs_code"]
-        console.print("[yellow]Please choose one of the listed helper numbers.[/yellow]")
-
+        console.print(
+            "[yellow]Please choose one of the listed helper numbers.[/yellow]"
+        )
 
 
 def choose_customs_book_entry(default_entry: str | None = None) -> str:
@@ -200,32 +210,47 @@ def choose_customs_book_entry(default_entry: str | None = None) -> str:
         for index, entry in enumerate(DEFAULT_CUSTOMS_BOOK, start=1):
             table.add_row(str(index), entry)
         console.print(table)
-        selection = IntPrompt.ask("Enter the customs book number", default=default_index)
+        selection = IntPrompt.ask(
+            "Enter the customs book number", default=default_index
+        )
         if 1 <= selection <= len(DEFAULT_CUSTOMS_BOOK):
             return DEFAULT_CUSTOMS_BOOK[selection - 1]
-        console.print("[yellow]Please choose one of the listed customs book numbers.[/yellow]")
+        console.print(
+            "[yellow]Please choose one of the listed customs book numbers.[/yellow]"
+        )
 
 
-
-def step_customs_details(logistics: LogisticsSDK, customs: CustomsSDK, package_id: int) -> None:
+def step_customs_details(
+    logistics: LogisticsSDK, customs: CustomsSDK, package_id: int
+) -> None:
     while True:
         try:
             package = logistics.get_package(package_id)
             existing = package.get("customs_details")
             truth = customs.get_ground_truth_for_package(package_id)
 
-            console.print("\n[bold blue]Step 2 of 4: Classify from the logistics description[/bold blue]")
-            console.print("[white]Do not re-enter the description. Read the logistics note and classify it.[/white]")
-            console.print(f"[cyan]Logistics description:[/cyan] {package['description']}")
+            console.print(
+                "\n[bold blue]Step 2 of 4: Classify from the logistics description[/bold blue]"
+            )
+            console.print(
+                "[white]Do not re-enter the description. Read the logistics note and classify it.[/white]"
+            )
+            console.print(
+                f"[cyan]Logistics description:[/cyan] {package['description']}"
+            )
             console.print(
                 f"[dim]The note already contains origin, destination, and price hints. "
                 f"Pick the HS code and confirm origin only.[/dim]"
             )
 
-            hs_code = prompt_hs_code(customs, default=str(existing["hs_code"]) if existing else "")
+            hs_code = prompt_hs_code(
+                customs, default=str(existing["hs_code"]) if existing else ""
+            )
             origin_country = Prompt.ask(
                 "Origin country from the logistics note",
-                default=str(existing["origin_country"]) if existing else str(truth["origin_country"]),
+                default=str(existing["origin_country"])
+                if existing
+                else str(truth["origin_country"]),
             ).strip()
 
             logistics.write_customs_details(
@@ -234,14 +259,17 @@ def step_customs_details(logistics: LogisticsSDK, customs: CustomsSDK, package_i
                 hs_code=hs_code,
                 origin_country=origin_country,
             )
-            console.print("[bold green]Saved customs classification in logistics.[/bold green]")
+            console.print(
+                "[bold green]Saved customs classification in logistics.[/bold green]"
+            )
             return
         except (LogisticsDomainError, CustomsDomainError, ValueError) as error:
             console.print(f"[bold red]Please correct this step:[/bold red] {error}")
 
 
-
-def step_declaration(logistics: LogisticsSDK, customs: CustomsSDK, package_id: int) -> None:
+def step_declaration(
+    logistics: LogisticsSDK, customs: CustomsSDK, package_id: int
+) -> None:
     while True:
         try:
             package = logistics.get_package(package_id)
@@ -254,11 +282,20 @@ def step_declaration(logistics: LogisticsSDK, customs: CustomsSDK, package_id: i
             content_description = str(customs_details["content_description"])
 
             customs.load_content_descriptions(
-                [{"package_ref": package_ref, "content_description": content_description}]
+                [
+                    {
+                        "package_ref": package_ref,
+                        "content_description": content_description,
+                    }
+                ]
             )
 
-            console.print("\n[bold blue]Step 3 of 4: Create customs declaration[/bold blue]")
-            console.print("[white]Destination and value should be taken from the logistics note and shipment data.[/white]")
+            console.print(
+                "\n[bold blue]Step 3 of 4: Create customs declaration[/bold blue]"
+            )
+            console.print(
+                "[white]Destination and value should be taken from the logistics note and shipment data.[/white]"
+            )
             console.print(f"[cyan]Logistics note:[/cyan] {package['description']}")
             destination_country = Prompt.ask(
                 "Destination country",
@@ -268,7 +305,9 @@ def step_declaration(logistics: LogisticsSDK, customs: CustomsSDK, package_id: i
                 "Declared customs value",
                 default=float(package["declared_value"]),
             )
-            customs_book_entry = choose_customs_book_entry(default_entry=str(truth["customs_book_entry"]))
+            customs_book_entry = choose_customs_book_entry(
+                default_entry=str(truth["customs_book_entry"])
+            )
 
             customs.create_customs_declaration(
                 package_ref=package_ref,
@@ -283,14 +322,19 @@ def step_declaration(logistics: LogisticsSDK, customs: CustomsSDK, package_id: i
             console.print(f"[bold red]Please correct this step:[/bold red] {error}")
 
 
-
 def step_freight(logistics: LogisticsSDK, package_id: int) -> None:
     while True:
         try:
-            console.print("\n[bold blue]Step 4 of 4: Move shipment to freight[/bold blue]")
-            console.print("[white]Freight means the shipment is released for transport.[/white]")
+            console.print(
+                "\n[bold blue]Step 4 of 4: Move shipment to freight[/bold blue]"
+            )
+            console.print(
+                "[white]Freight means the shipment is released for transport.[/white]"
+            )
             if not Confirm.ask("Move this shipment to freight?", default=True):
-                console.print("[yellow]This step is required before the process can continue.[/yellow]")
+                console.print(
+                    "[yellow]This step is required before the process can continue.[/yellow]"
+                )
                 continue
 
             logistics.move_to_freight([package_id])
@@ -311,7 +355,9 @@ def run() -> None:
     while True:
         packages = get_open_shipments(logistics)
         if not packages:
-            console.print("[bold green]No open shipments left. Manual queue is complete.[/bold green]")
+            console.print(
+                "[bold green]No open shipments left. Manual queue is complete.[/bold green]"
+            )
             raise typer.Exit(code=0)
 
         try:

@@ -9,12 +9,6 @@ from tqdm import tqdm
 
 from infrastructure import customs_sdk, logistics_sdk
 from infrastructure.tools import SHIPMENT_TOOLS
-from utils.evaluation import (
-    capture_evaluation_context,
-    evaluate_run,
-    log_evaluation_to_mlflow,
-    tool_names_from_result,
-)
 from utils.prompts import BASE_SYSTEM_PROMPT
 
 model = OpenAIChatModel(
@@ -42,37 +36,26 @@ async def process_package(package):
     if output != {"package_ref": f"PKG-{package_id}", "processed": True}:
         raise ValueError(f"Unexpected agent output for PKG-{package_id}: {output!r}")
 
-    return output, tool_names_from_result(result)
+    return output
+
+
+async def run():
+    outputs = []
+    packages = [
+        package
+        for package in logistics_sdk.list_packages()
+        if package["status"] == "loaded"
+    ]
+    for package in tqdm(packages, desc="Processing packages"):
+        output = await process_package(package)
+        if output is not None:
+            outputs.append(output)
+
+    return json.dumps({"count": len(outputs), "packages": outputs})
 
 
 async def main():
-    customs_sdk.reset()
-    logistics_sdk.reset()
-    context = capture_evaluation_context()
-
-    outputs = []
-    tool_names = []
-    packages = [logistics_sdk.get_package(package_id) for package_id in context.expected_package_ids]
-    packages = [package for package in packages if package["status"] == "loaded"]
-    for package in tqdm(packages, desc="Processing packages"):
-        output, names = await process_package(package)
-        if output is not None:
-            outputs.append(output)
-            tool_names.extend(names)
-
-    report = json.dumps({"count": len(outputs), "packages": outputs})
-    evaluation = evaluate_run(
-        report,
-        context=context,
-        tool_names_seen=tool_names,
-    )
-    log_evaluation_to_mlflow(
-        evaluation,
-        output_text=report,
-        prompt=PROMPT,
-        name="2_agentic_workflow",
-    )
-    return {"output": report, "metrics": evaluation.metrics()}
+    return await run()
 
 
 if __name__ == "__main__":
