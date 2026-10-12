@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import uvicorn
-from openai import AsyncOpenAI
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai_harness import InputBlocked, InputGuardrail
 
 from importlib import import_module
 
 from infrastructure.tools import ALL_TOOLS
 from utils.evaluation.mlflow import setup_mlflow
+from utils.models import get_chat_model
 from utils.prompts import BASE_SYSTEM_PROMPT
 
 ChatBasePathMiddleware = import_module("5_testing.web").ChatBasePathMiddleware
@@ -26,10 +24,7 @@ setup_mlflow(autolog=True)
 # ---------------------------------------------------------------------------
 
 
-model = OpenAIChatModel(
-    "openai/gpt-5.4",
-    provider=OpenAIProvider(openai_client=AsyncOpenAI()),
-)
+model = get_chat_model()
 
 
 # ---------------------------------------------------------------------------
@@ -42,10 +37,7 @@ class GuardrailDecision(BaseModel):
     reason: str
 
 
-guardrail_model = OpenAIChatModel(
-    "gcp/gemini-3-flash-preview",
-    provider=OpenAIProvider(openai_client=AsyncOpenAI()),
-)
+guardrail_model = get_chat_model("gcp/gemini-3-flash-preview")
 
 
 guardrail_agent = Agent(

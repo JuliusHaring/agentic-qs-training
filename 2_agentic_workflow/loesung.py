@@ -1,20 +1,15 @@
 import asyncio
 import json
 
-from openai import AsyncOpenAI
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 from tqdm import tqdm
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import CUSTOMS_TOOLS, LOGISTICS_TOOLS
 from utils.evaluation.mlflow import summarize_and_log
+from utils.models import get_chat_model
 
-model = OpenAIChatModel(
-    "openai/gpt-5.4",
-    provider=OpenAIProvider(openai_client=AsyncOpenAI()),
-)
+model = get_chat_model()
 
 
 async def agent_logistics(package):

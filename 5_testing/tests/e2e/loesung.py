@@ -26,7 +26,9 @@ def _first_loaded_safe_package() -> dict[str, object]:
         package
         for package in logistics_sdk.list_packages()
         if package["status"] == "loaded"
-        and customs_sdk.get_ground_truth_for_package(int(package["id"]))["is_prohibited"]
+        and customs_sdk.get_ground_truth_for_package(int(package["id"]))[
+            "is_prohibited"
+        ]
         is False
     )
 
@@ -36,7 +38,9 @@ def _first_loaded_prohibited_package() -> dict[str, object]:
         package
         for package in logistics_sdk.list_packages()
         if package["status"] == "loaded"
-        and customs_sdk.get_ground_truth_for_package(int(package["id"]))["is_prohibited"]
+        and customs_sdk.get_ground_truth_for_package(int(package["id"]))[
+            "is_prohibited"
+        ]
         is True
     )
 

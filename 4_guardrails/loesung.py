@@ -1,21 +1,16 @@
 import asyncio
 
-from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai_harness import GuardrailResult, InputBlocked, InputGuardrail
 from tqdm import tqdm
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import CUSTOMS_TOOLS, LOGISTICS_TOOLS
 from utils.evaluation.mlflow import summarize_and_log
+from utils.models import get_chat_model
 
-model = OpenAIChatModel(
-    "openai/gpt-5.4",
-    provider=OpenAIProvider(openai_client=AsyncOpenAI()),
-)
+model = get_chat_model()
 
 
 class LogisticsHandoff(BaseModel):
@@ -33,10 +28,7 @@ class GuardrailDecision(BaseModel):
     reason: str
 
 
-guardrail_model = OpenAIChatModel(
-    "gcp/gemini-3-flash-preview",
-    provider=OpenAIProvider(openai_client=AsyncOpenAI()),
-)
+guardrail_model = get_chat_model("gcp/gemini-3-flash-preview")
 
 
 guardrail_agent = Agent(

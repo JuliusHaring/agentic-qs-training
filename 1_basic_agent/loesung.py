@@ -1,19 +1,14 @@
 import asyncio
 
-from openai import AsyncOpenAI
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import ALL_TOOLS
 from utils.evaluation.mlflow import summarize_and_log
+from utils.models import get_chat_model
 from utils.prompts import BASE_SYSTEM_PROMPT
 
-model = OpenAIChatModel(
-    "openai/gpt-5.4",
-    provider=OpenAIProvider(openai_client=AsyncOpenAI()),
-)
+model = get_chat_model()
 
 agent = Agent(
     model=model,
