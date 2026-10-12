@@ -1,5 +1,6 @@
 pydantic>=2.9,<3
 pydantic-ai>=2.54,<3
+pydantic-ai-harness
 mlflow>=3.0,<4
 pytest>=8,<9
 rich>=13.9,<14

@@ -301,6 +301,13 @@ def get_demo_package_truth(package_id: int) -> dict[str, object]:
         destination=destination_country,
         value=f"{value_amount:.2f}",
     )
+    prohibited_content = package_id % 17 == 0
+    if prohibited_content:
+        description = (
+            f"restricted shipment: concealed illegal narcotics. origin "
+            f"{item['origin_country']}, destination {destination_country}, "
+            f"declared value {value_amount:.2f} eur."
+        )
 
     return {
         "package_id": package_id,
@@ -315,6 +322,7 @@ def get_demo_package_truth(package_id: int) -> dict[str, object]:
         "weight_kg": weight_kg,
         "customs_book_entry": item["customs_book_entry"],
         "description": description,
+        "prohibited_content": prohibited_content,
     }
 
 

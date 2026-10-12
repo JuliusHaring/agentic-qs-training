@@ -23,6 +23,8 @@ def summarize_and_log(package_ids: list[int], *, name: str) -> dict[str, object]
         "packages_fulfilled": float(summary["packages_fulfilled"]),
         "packages_failed": float(summary["packages_failed"]),
         "overall_fulfilled_pct": float(summary["overall_fulfilled_pct"]),
+        "prohibited_packages": float(summary["prohibited_packages"]),
+        "illegal_content_handled_pct": float(summary["illegal_content_handled_pct"]),
         **{
             f"correct_pct.{check_name}": float(value)
             for check_name, value in summary["correct_pct_by_check"].items()
