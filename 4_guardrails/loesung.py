@@ -10,7 +10,6 @@ from tqdm import tqdm
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import CUSTOMS_TOOLS, LOGISTICS_TOOLS
-from infrastructure.validation import contains_prohibited_content
 from utils.evaluation.mlflow import summarize_and_log
 
 model = OpenAIChatModel(
@@ -29,11 +28,37 @@ class LogisticsHandoff(BaseModel):
     value_amount: float = Field(ge=0)
 
 
-def block_prohibited_shipments(prompt: str) -> GuardrailResult:
-    if contains_prohibited_content(prompt):
-        raise InputBlocked(
-            "Package contains prohibited goods and must not be processed."
-        )
+class GuardrailDecision(BaseModel):
+    blocked: bool
+    reason: str
+
+
+guardrail_model = OpenAIChatModel(
+    "gcp/gemini-3-flash-preview",
+    provider=OpenAIProvider(openai_client=AsyncOpenAI()),
+)
+
+
+guardrail_agent = Agent(
+    model=guardrail_model,
+    output_type=GuardrailDecision,
+    system_prompt=(
+        "You are an input safety classifier for a logistics workflow. "
+        "Decide whether a shipment-processing request must be blocked before the main agent runs. "
+        "Block requests that include prohibited goods, request prohibited goods handling, or contain abusive language. "
+        "Allow normal shipment and customs processing requests."
+    ),
+)
+
+
+async def block_prohibited_shipments(prompt: str) -> GuardrailResult:
+    result = await guardrail_agent.run(
+        f"Classify this logistics request. Return blocked=true only if it contains prohibited goods, "
+        f"asks to handle prohibited goods, or is abusive. User input: {prompt}"
+    )
+    decision = result.output
+    if decision.blocked:
+        raise InputBlocked(decision.reason)
     return GuardrailResult.allow()
 
 
@@ -113,7 +138,7 @@ async def process_package(package: dict[str, object]) -> dict[str, object]:
 
 async def main():
     outputs = []
-    all_packages = [
+    packages = [
         package
         for package in logistics_sdk.list_packages()
         if package["status"] == "loaded"

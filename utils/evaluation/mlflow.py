@@ -10,14 +10,20 @@ from utils.evaluation.eval import EvaluationResult
 TRACKING_URI = "https://mlflow.training.juliusharing.com/"
 
 
+def setup_mlflow(autolog=False):
+    mlflow.set_tracking_uri(TRACKING_URI)
+    mlflow.set_experiment(os.environ.get("PARTICIPANT_NAME"))
+    if autolog is True:
+        mlflow.pydantic_ai.autolog()
+
+
 def summarize_and_log(package_ids: list[int], *, name: str) -> dict[str, object]:
     """Build, log, and return a numeric fulfillment summary."""
 
     from infrastructure.validation import summarize_fulfillment
 
     summary = summarize_fulfillment(package_ids)
-    mlflow.set_tracking_uri(TRACKING_URI)
-    mlflow.set_experiment(os.environ.get("PARTICIPANT_NAME", "julius"))
+    setup_mlflow()
     metrics = {
         "packages_total": float(summary["packages_total"]),
         "packages_fulfilled": float(summary["packages_fulfilled"]),
@@ -48,8 +54,7 @@ def log_evaluation_to_mlflow(
 ) -> None:
     """Persist one completed evaluation without coupling evaluation logic to MLflow."""
 
-    mlflow.set_tracking_uri(TRACKING_URI)
-    experiment_name = os.environ.get("PARTICIPANT_NAME")
+    setup_mlflow()
     if experiment_name:
         mlflow.set_experiment(experiment_name)
 
