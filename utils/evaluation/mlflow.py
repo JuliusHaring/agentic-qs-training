@@ -7,7 +7,6 @@ import mlflow
 
 from utils.evaluation.eval import EvaluationResult
 
-
 TRACKING_URI = "https://mlflow.training.juliusharing.com/"
 
 

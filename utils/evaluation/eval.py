@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from infrastructure import customs_sdk, logistics_sdk
-
 
 REQUIRED_TOOL_NAMES = [
     "list_packages",

@@ -7,39 +7,88 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from tqdm import tqdm
 
-from infrastructure import customs_sdk, logistics_sdk
-from infrastructure.tools import SHIPMENT_TOOLS
-from utils.prompts import BASE_SYSTEM_PROMPT
+from infrastructure import logistics_sdk
+from infrastructure.tools import CUSTOMS_TOOLS, LOGISTICS_TOOLS
+from infrastructure.validation import check_package_fulfilled
 
 model = OpenAIChatModel(
     "openai/gpt-5.4",
     provider=OpenAIProvider(openai_client=AsyncOpenAI()),
 )
 
-agent = Agent(
-    model=model,
-    system_prompt=BASE_SYSTEM_PROMPT,
-    tools=SHIPMENT_TOOLS,
-)
 
-PROMPT = """Process package PKG-{package_id} through every missing customs step and move it to freight.
+async def agent_logistics(package):
+    prompt = f"""Prepare this loaded package for customs processing:
 
-Inspect existing logistics and customs records first and do not create duplicates.
-Return JSON with package_ref and processed true / false."""
+{package}
+
+Infer the precise content description, HS code, and origin country from the
+shipment description. Write those customs details for package {package["id"]}.
+Do not move the package to freight yet.
+
+Return JSON with the keys package_id, package_ref, content_description, hs_code,
+origin_country, destination_country, and value_amount."""
+    agent = Agent(
+        model=model,
+        system_prompt=(
+            "You are a logistics specialist. Classify one package and save its "
+            "structured customs details. Use tools for every write operation."
+        ),
+        tools=LOGISTICS_TOOLS,
+    )
+    return await agent.run(prompt)
+
+
+async def agent_customs(shipment):
+    package_ref = shipment["package_ref"]
+    content_description = shipment["content_description"]
+    destination_country = shipment["destination_country"]
+    value_amount = shipment["value_amount"]
+    prompt = f"""Complete the customs records for {package_ref} using the
+verified logistics handoff:
+
+- Content description: {content_description}
+- Destination country: {destination_country}
+- Customs value: {value_amount}
+- Logistics classification: HS {shipment["hs_code"]}, origin {shipment["origin_country"]}
+
+Inspect existing content descriptions and declarations before writing. If the
+content description is missing, load "{content_description}" for {package_ref}.
+If the declaration is missing, create it for destination {destination_country}
+and value {value_amount}, selecting the correct customs-book entry. Do not create
+duplicates. Return a concise summary."""
+    agent = Agent(
+        model=model,
+        system_prompt=(
+            "You are a customs specialist. Complete all missing customs records "
+            "for one package. Always inspect existing records first and use "
+            "tools for every operation."
+        ),
+        tools=CUSTOMS_TOOLS,
+    )
+    return await agent.run(prompt)
 
 
 async def process_package(package):
-    package_id = package["id"]
-    result = await agent.run(PROMPT.format(package_id=package_id))
-    output = json.loads(str(result.output))
+    logistics_result = await agent_logistics(package)
+    shipment = json.loads(logistics_result.output)
 
-    if output != {"package_ref": f"PKG-{package_id}", "processed": True}:
-        raise ValueError(f"Unexpected agent output for PKG-{package_id}: {output!r}")
+    customs_result = await agent_customs(shipment)
+    freight_result = logistics_sdk.move_to_freight([shipment["package_id"]])
 
-    return output
+    return {
+        "package_ref": shipment["package_ref"],
+        "classification": {
+            "content_description": shipment["content_description"],
+            "hs_code": shipment["hs_code"],
+            "origin_country": shipment["origin_country"],
+        },
+        "customs": customs_result.output,
+        "freight": freight_result,
+    }
 
 
-async def run():
+async def main():
     outputs = []
     packages = [
         package
@@ -47,15 +96,13 @@ async def run():
         if package["status"] == "loaded"
     ]
     for package in tqdm(packages, desc="Processing packages"):
-        output = await process_package(package)
-        if output is not None:
-            outputs.append(output)
+        result = await process_package(package)
+        check = check_package_fulfilled(package["id"])
+        if not check["fulfilled"]:
+            raise RuntimeError(f"Package not fulfilled: {check}")
+        outputs.append({**result, "check": check})
 
-    return json.dumps({"count": len(outputs), "packages": outputs})
-
-
-async def main():
-    return await run()
+    return outputs
 
 
 if __name__ == "__main__":

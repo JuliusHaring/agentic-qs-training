@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from pathlib import Path
-
+import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
-import typer
 
 from infrastructure import CustomsSDK, LogisticsSDK
 from infrastructure.customs import (
     DEFAULT_CUSTOMS_BOOK,
+)
+from infrastructure.customs import (
     DomainError as CustomsDomainError,
 )
 from infrastructure.logistics import DomainError as LogisticsDomainError
@@ -239,8 +239,8 @@ def step_customs_details(
                 f"[cyan]Logistics description:[/cyan] {package['description']}"
             )
             console.print(
-                f"[dim]The note already contains origin, destination, and price hints. "
-                f"Pick the HS code and confirm origin only.[/dim]"
+                "[dim]The note already contains origin, destination, and price hints. "
+                "Pick the HS code and confirm origin only.[/dim]"
             )
 
             hs_code = prompt_hs_code(

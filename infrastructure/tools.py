@@ -96,52 +96,65 @@ def list_customs_declarations() -> list[dict[str, object]] | dict[str, object]:
         return _error_result(error)
 
 
-SHIPMENT_TOOLS = [
-    Tool(
-        list_packages,
-        name="list_packages",
-        description="List all packages currently known to logistics, including status and customs details.",
-    ),
-    Tool(
-        write_customs_details,
-        name="write_customs_details",
-        description="Attach customs details to a package in logistics using package_id, content_description, hs_code, and origin_country.",
-    ),
-    Tool(
-        move_to_freight,
-        name="move_to_freight",
-        description="Move packages into freight after all customs work is complete. Input is a list of numeric package IDs.",
-    ),
-    Tool(
-        load_content_descriptions,
-        name="load_content_descriptions",
-        description="Load missing package content descriptions into customs. Input is a list of items with package_ref and content_description.",
-    ),
-    Tool(
-        list_content_descriptions,
-        name="list_content_descriptions",
-        description="List all package content descriptions currently loaded in customs.",
-    ),
-    Tool(
-        get_customs_book,
-        name="get_customs_book",
-        description="Get the valid customs book entries for declarations.",
-    ),
-    Tool(
-        get_hs_code_dictionary,
-        name="get_hs_code_dictionary",
-        description="Get HS code classification guidance.",
-    ),
-    Tool(
-        create_customs_declaration,
-        name="create_customs_declaration",
-        description="Create one missing customs declaration using package_ref, content_description, destination_country, value_amount, and a valid customs_book_entry.",
-    ),
-    Tool(
-        list_customs_declarations,
-        name="list_customs_declarations",
-        description="List all customs declarations that have already been created.",
-    ),
-]
+LIST_PACKAGES_TOOL = Tool(
+    list_packages,
+    name="list_packages",
+    description="List all packages currently known to logistics, including status and customs details.",
+)
+WRITE_CUSTOMS_DETAILS_TOOL = Tool(
+    write_customs_details,
+    name="write_customs_details",
+    description="Attach customs details to a package in logistics using package_id, content_description, hs_code, and origin_country.",
+)
+MOVE_TO_FREIGHT_TOOL = Tool(
+    move_to_freight,
+    name="move_to_freight",
+    description="Move packages into freight after all customs work is complete. Input is a list of numeric package IDs.",
+)
+LOAD_CONTENT_DESCRIPTIONS_TOOL = Tool(
+    load_content_descriptions,
+    name="load_content_descriptions",
+    description="Load missing package content descriptions into customs. Input is a list of items with package_ref and content_description.",
+)
+LIST_CONTENT_DESCRIPTIONS_TOOL = Tool(
+    list_content_descriptions,
+    name="list_content_descriptions",
+    description="List all package content descriptions currently loaded in customs.",
+)
+GET_CUSTOMS_BOOK_TOOL = Tool(
+    get_customs_book,
+    name="get_customs_book",
+    description="Get the valid customs book entries for declarations.",
+)
+GET_HS_CODE_DICTIONARY_TOOL = Tool(
+    get_hs_code_dictionary,
+    name="get_hs_code_dictionary",
+    description="Get HS code classification guidance.",
+)
+CREATE_CUSTOMS_DECLARATION_TOOL = Tool(
+    create_customs_declaration,
+    name="create_customs_declaration",
+    description="Create one missing customs declaration using package_ref, content_description, destination_country, value_amount, and a valid customs_book_entry.",
+)
+LIST_CUSTOMS_DECLARATIONS_TOOL = Tool(
+    list_customs_declarations,
+    name="list_customs_declarations",
+    description="List all customs declarations that have already been created.",
+)
 
-__all__ = ["SHIPMENT_TOOLS"]
+LOGISTICS_TOOLS = [
+    LIST_PACKAGES_TOOL,
+    WRITE_CUSTOMS_DETAILS_TOOL,
+    MOVE_TO_FREIGHT_TOOL,
+]
+CUSTOMS_TOOLS = [
+    LOAD_CONTENT_DESCRIPTIONS_TOOL,
+    LIST_CONTENT_DESCRIPTIONS_TOOL,
+    GET_CUSTOMS_BOOK_TOOL,
+    GET_HS_CODE_DICTIONARY_TOOL,
+    CREATE_CUSTOMS_DECLARATION_TOOL,
+    LIST_CUSTOMS_DECLARATIONS_TOOL,
+]
+ALL_TOOLS = [*LOGISTICS_TOOLS, *CUSTOMS_TOOLS]
+
+__all__ = ["ALL_TOOLS", "CUSTOMS_TOOLS", "LOGISTICS_TOOLS"]
