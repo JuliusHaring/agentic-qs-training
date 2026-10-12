@@ -5,7 +5,9 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
+from infrastructure import logistics_sdk
 from infrastructure.tools import ALL_TOOLS
+from utils.evaluation.mlflow import summarize_and_log
 from utils.prompts import BASE_SYSTEM_PROMPT
 
 model = OpenAIChatModel(
@@ -25,8 +27,14 @@ Avoid duplicating records that already exist. When finished, report the package 
 
 
 async def main():
+    package_ids = [
+        package["id"]
+        for package in logistics_sdk.list_packages()
+        if package["status"] == "loaded"
+    ]
     result = await agent.run(PROMPT)
-    return str(result.output)
+    summary = summarize_and_log(package_ids, name="1_basic_agent")
+    return {"output": str(result.output), "summary": summary}
 
 
 if __name__ == "__main__":

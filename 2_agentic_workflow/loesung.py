@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import CUSTOMS_TOOLS, LOGISTICS_TOOLS
-from infrastructure.validation import check_package_fulfilled
+from utils.evaluation.mlflow import summarize_and_log
 
 model = OpenAIChatModel(
     "openai/gpt-5.4",
@@ -96,13 +96,12 @@ async def main():
         if package["status"] == "loaded"
     ]
     for package in tqdm(packages, desc="Processing packages"):
-        result = await process_package(package)
-        check = check_package_fulfilled(package["id"])
-        if not check["fulfilled"]:
-            raise RuntimeError(f"Package not fulfilled: {check}")
-        outputs.append({**result, "check": check})
+        outputs.append(await process_package(package))
 
-    return outputs
+    summary = summarize_and_log(
+        [package["id"] for package in packages], name="2_agentic_workflow"
+    )
+    return {"outputs": outputs, "summary": summary}
 
 
 if __name__ == "__main__":

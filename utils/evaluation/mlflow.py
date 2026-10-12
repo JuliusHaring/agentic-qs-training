@@ -10,6 +10,33 @@ from utils.evaluation.eval import EvaluationResult
 TRACKING_URI = "https://mlflow.training.juliusharing.com/"
 
 
+def summarize_and_log(package_ids: list[int], *, name: str) -> dict[str, object]:
+    """Build, log, and return a numeric fulfillment summary."""
+
+    from infrastructure.validation import summarize_fulfillment
+
+    summary = summarize_fulfillment(package_ids)
+    mlflow.set_tracking_uri(TRACKING_URI)
+    mlflow.set_experiment(os.environ.get("PARTICIPANT_NAME", "julius"))
+    metrics = {
+        "packages_total": float(summary["packages_total"]),
+        "packages_fulfilled": float(summary["packages_fulfilled"]),
+        "packages_failed": float(summary["packages_failed"]),
+        "overall_fulfilled_pct": float(summary["overall_fulfilled_pct"]),
+        **{
+            f"correct_pct.{check_name}": float(value)
+            for check_name, value in summary["correct_pct_by_check"].items()
+        },
+    }
+    with mlflow.start_run(run_name=name):
+        mlflow.log_metrics(metrics)
+        mlflow.log_text(
+            json.dumps(summary, indent=2, default=str),
+            "artifacts/summary.json",
+        )
+    return summary
+
+
 def log_evaluation_to_mlflow(
     evaluation: EvaluationResult,
     *,
