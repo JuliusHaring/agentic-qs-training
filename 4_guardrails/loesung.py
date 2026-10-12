@@ -31,7 +31,9 @@ class LogisticsHandoff(BaseModel):
 
 def block_prohibited_shipments(prompt: str) -> GuardrailResult:
     if contains_prohibited_content(prompt):
-        raise InputBlocked("Package contains prohibited goods and must not be processed.")
+        raise InputBlocked(
+            "Package contains prohibited goods and must not be processed."
+        )
     return GuardrailResult.allow()
 
 
