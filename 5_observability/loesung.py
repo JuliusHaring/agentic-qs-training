@@ -147,11 +147,21 @@ the verified logistics handoff:
 - Customs value: {shipment.value_amount}
 - Logistics classification: HS {shipment.hs_code}, origin {shipment.origin_country}
 
-Inspect existing content descriptions and declarations before writing. If the
-content description is missing, load \"{shipment.content_description}\" for
-{shipment.package_ref}. If the declaration is missing, create it for destination
-{shipment.destination_country} and value {shipment.value_amount}, selecting the
-correct customs-book entry. Do not create duplicates. Return a concise summary."""
+Inspect existing content descriptions and declarations before writing.
+
+Required order of operations:
+1. Check whether the content description for {shipment.package_ref} already exists.
+2. If it is missing, call the load-content-descriptions tool first to load
+   \"{shipment.content_description}\" for {shipment.package_ref}.
+3. Only after the content description exists, check whether the customs
+   declaration already exists.
+4. If the declaration is missing, create it for destination
+   {shipment.destination_country} and value {shipment.value_amount}, selecting the
+   correct customs-book entry.
+5. Do not create duplicates.
+
+Never call the declaration tool before the content description has been loaded.
+Return a concise summary."""
     agent = Agent(
         model=model,
         system_prompt=(
