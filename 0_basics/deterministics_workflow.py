@@ -1,5 +1,5 @@
 from infrastructure import customs_sdk, logistics_sdk
-from utils.evaluation.mlflow import summarize_and_log
+from utils.mlflow import summarize_and_log
 
 CLASSIFICATION_RULES = {
     "laptop": ("laptop computers with usb-c docks", "847130", "CN"),

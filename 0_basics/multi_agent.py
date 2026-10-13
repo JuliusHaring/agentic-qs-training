@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import CUSTOMS_TOOLS, LOGISTICS_TOOLS
-from utils.evaluation.mlflow import summarize_and_log
+from utils.mlflow import summarize_and_log
 from utils.models import get_chat_model
 
 model = get_chat_model()

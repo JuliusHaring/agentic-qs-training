@@ -4,7 +4,7 @@ from pydantic_ai import Agent
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import ALL_TOOLS
-from utils.evaluation.mlflow import summarize_and_log
+from utils.mlflow import summarize_and_log
 from utils.models import get_chat_model
 from utils.prompts import BASE_SYSTEM_PROMPT
 

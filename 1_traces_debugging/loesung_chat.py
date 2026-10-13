@@ -9,7 +9,7 @@ from pydantic_ai_harness import InputBlocked, InputGuardrail
 
 from infrastructure.tools import ALL_TOOLS
 from utils.chat_ui import ChatBasePathMiddleware
-from utils.evaluation.mlflow import setup_mlflow
+from utils.mlflow import setup_mlflow
 from utils.models import get_chat_model
 from utils.prompts import BASE_SYSTEM_PROMPT
 

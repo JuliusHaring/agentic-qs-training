@@ -5,11 +5,8 @@ import os
 
 import mlflow
 
-TRACKING_URI = "https://mlflow.training.juliusharing.com/"
-
 
 def setup_mlflow(autolog: bool = False) -> None:
-    mlflow.set_tracking_uri(TRACKING_URI)
     mlflow.set_experiment(os.environ.get("PARTICIPANT_NAME"))
     if autolog:
         mlflow.pydantic_ai.autolog()

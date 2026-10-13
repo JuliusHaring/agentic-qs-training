@@ -14,7 +14,7 @@ from pydantic_ai_harness import GuardrailResult, InputBlocked, InputGuardrail
 from tqdm import tqdm
 
 from infrastructure import customs_sdk, logistics_sdk
-from utils.evaluation.mlflow import summarize_and_log
+from utils.mlflow import summarize_and_log
 from utils.models import get_chat_model
 
 
