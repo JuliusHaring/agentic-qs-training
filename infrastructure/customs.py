@@ -233,10 +233,14 @@ def evaluate_package_classification(package_id: int) -> dict[str, object]:
 
 
 def create_customs_declaration(payload: DeclarationRequest) -> DeclareResponse:
-    if payload.package_ref not in customs_store.loaded_descriptions:
-        raise DomainError(
-            "Package content description must be loaded before declaration"
-        )
+    loaded_description = customs_store.loaded_descriptions.get(payload.package_ref)
+    if loaded_description is None or str(
+        loaded_description.get("content_description", "")
+    ).lower() != payload.content_description.lower():
+        customs_store.loaded_descriptions[payload.package_ref] = {
+            "package_ref": payload.package_ref,
+            "content_description": payload.content_description,
+        }
 
     if payload.customs_book_entry not in customs_store.customs_book:
         raise DomainError("Unknown customs book entry")
