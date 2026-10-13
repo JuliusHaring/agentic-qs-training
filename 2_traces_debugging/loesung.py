@@ -1,6 +1,7 @@
 import asyncio
 
 import mlflow
+from mlflow.entities import SpanType
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from tqdm import tqdm
@@ -41,7 +42,7 @@ customs specialist."""
         tools=LOGISTICS_TOOLS,
         output_type=LogisticsHandoff,
     )
-    with mlflow.start_span(name="agent_logistics", span_type="AGENT") as span:
+    with mlflow.start_span(name="agent_logistics", span_type=SpanType.AGENT) as span:
         span.set_inputs({"package": package, "prompt": prompt})
         result = await agent.run(prompt)
         span.set_outputs(result.output.model_dump())
@@ -71,7 +72,7 @@ correct customs-book entry. Do not create duplicates. Return a concise summary."
         ),
         tools=CUSTOMS_TOOLS,
     )
-    with mlflow.start_span(name="agent_customs", span_type="AGENT") as span:
+    with mlflow.start_span(name="agent_customs", span_type=SpanType.AGENT) as span:
         span.set_inputs({"shipment": shipment.model_dump(), "prompt": prompt})
         result = await agent.run(prompt)
         span.set_outputs({"response": result.output})
@@ -79,14 +80,14 @@ correct customs-book entry. Do not create duplicates. Return a concise summary."
 
 
 async def process_package(package):
-    with mlflow.start_span(name="process_package", span_type="CHAIN") as span:
+    with mlflow.start_span(name="process_package", span_type=SpanType.CHAIN) as span:
         span.set_inputs({"package": package})
 
         logistics_result = await agent_logistics(package)
         shipment = logistics_result.output
 
         customs_result = await agent_customs(shipment)
-        with mlflow.start_span(name="move_to_freight", span_type="TOOL") as tool_span:
+        with mlflow.start_span(name="move_to_freight", span_type=SpanType.TOOL) as tool_span:
             tool_span.set_inputs({"package_ids": [shipment.package_id]})
             freight_result = logistics_sdk.move_to_freight([shipment.package_id])
             tool_span.set_outputs({"result": freight_result})
