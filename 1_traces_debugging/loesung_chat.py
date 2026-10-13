@@ -69,6 +69,7 @@ async def llm_guardrail(prompt: str) -> bool:
         raise InputBlocked(decision.reason)
     return True
 
+
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------

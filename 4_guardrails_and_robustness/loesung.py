@@ -141,7 +141,9 @@ class CustomsCoordinator:
             }
 
         self._ensure_customs_details(package_id, current, classification)
-        self._ensure_content_description(package_ref, classification.content_description)
+        self._ensure_content_description(
+            package_ref, classification.content_description
+        )
         declaration = self._ensure_declaration(
             package_ref=package_ref,
             classification=classification,

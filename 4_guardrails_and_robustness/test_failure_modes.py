@@ -31,7 +31,6 @@ class InvalidClassification(app.ShipmentClassification):
         object.__setattr__(self, "origin_country", origin_country)
 
 
-
 def classification(
     *,
     content: str = "cnc machine replacement spindles",
@@ -41,7 +40,12 @@ def classification(
     reason: str = "supported by shipment data",
 ):
     if status == "classified":
-        if len(hs_code) == 6 and hs_code.isdigit() and len(origin) == 2 and origin.isalpha():
+        if (
+            len(hs_code) == 6
+            and hs_code.isdigit()
+            and len(origin) == 2
+            and origin.isalpha()
+        ):
             return app.ShipmentClassification(
                 content_description=content,
                 hs_code=hs_code,
@@ -53,7 +57,6 @@ def classification(
             origin_country=origin,
         )
     return app.InputBlocked(reason)
-
 
 
 def fixed_classifier(decision) -> Callable[[dict[str, object]], Awaitable[object]]:
@@ -71,10 +74,8 @@ def reset_stores() -> None:
     logistics_sdk.reset()
 
 
-
 def package(package_id: int = PACKAGE_ID) -> dict[str, object]:
     return logistics_sdk.get_package(package_id)
-
 
 
 def declarations(package_ref: str = "PKG-4") -> list[dict[str, object]]:
@@ -83,7 +84,6 @@ def declarations(package_ref: str = "PKG-4") -> list[dict[str, object]]:
         for item in customs_sdk.list_customs_declarations()
         if item["package_ref"] == package_ref
     ]
-
 
 
 def test_customs_timeout_never_moves_package_to_freight(
@@ -108,7 +108,6 @@ def test_customs_timeout_never_moves_package_to_freight(
     assert declarations() == []
 
     monkeypatch.setattr(app.coordinator, "classify", original_classify)
-
 
 
 def test_interrupted_run_resumes_without_duplicate_declaration(
@@ -139,7 +138,6 @@ def test_interrupted_run_resumes_without_duplicate_declaration(
     assert len(declarations()) == 1
 
     monkeypatch.setattr(app.coordinator, "classify", original_classify)
-
 
 
 def test_timeout_after_commit_is_resolved_by_reading_existing_state(
@@ -253,7 +251,6 @@ def test_bad_or_ambiguous_data_causes_no_write(
     monkeypatch.setattr(app.coordinator, "classify", original_classify)
 
 
-
 def test_prompt_injection_in_shipment_data_is_never_executed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -289,7 +286,6 @@ def test_prompt_injection_in_shipment_data_is_never_executed(
     assert declarations(f"PKG-{package_id}") == []
 
     monkeypatch.setattr(app.coordinator, "classify", original_classify)
-
 
 
 def main() -> int:
