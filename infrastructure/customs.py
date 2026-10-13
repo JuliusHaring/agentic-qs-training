@@ -185,6 +185,7 @@ def get_ground_truth_for_package(package_id: int) -> dict[str, object]:
         "customs_book_entry": truth["customs_book_entry"],
         "description": truth["description"],
         "goods": truth["goods"],
+        "is_prohibited": truth["prohibited_content"],
     }
 
 
