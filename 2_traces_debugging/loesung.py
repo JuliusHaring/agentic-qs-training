@@ -1,12 +1,13 @@
 import asyncio
 
+import mlflow
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from tqdm import tqdm
 
 from infrastructure import logistics_sdk
 from infrastructure.tools import CUSTOMS_TOOLS, LOGISTICS_TOOLS
-from utils.evaluation.mlflow import summarize_and_log
+from utils.evaluation.mlflow import setup_mlflow, summarize_and_log
 from utils.models import get_chat_model
 
 model = get_chat_model()
@@ -40,7 +41,11 @@ customs specialist."""
         tools=LOGISTICS_TOOLS,
         output_type=LogisticsHandoff,
     )
-    return await agent.run(prompt)
+    with mlflow.start_span(name="agent_logistics", span_type="AGENT") as span:
+        span.set_inputs({"package": package, "prompt": prompt})
+        result = await agent.run(prompt)
+        span.set_outputs(result.output.model_dump())
+        return result
 
 
 async def agent_customs(shipment: LogisticsHandoff):
@@ -66,29 +71,43 @@ correct customs-book entry. Do not create duplicates. Return a concise summary."
         ),
         tools=CUSTOMS_TOOLS,
     )
-    return await agent.run(prompt)
+    with mlflow.start_span(name="agent_customs", span_type="AGENT") as span:
+        span.set_inputs({"shipment": shipment.model_dump(), "prompt": prompt})
+        result = await agent.run(prompt)
+        span.set_outputs({"response": result.output})
+        return result
 
 
 async def process_package(package):
-    logistics_result = await agent_logistics(package)
-    shipment = logistics_result.output
+    with mlflow.start_span(name="process_package", span_type="CHAIN") as span:
+        span.set_inputs({"package": package})
 
-    customs_result = await agent_customs(shipment)
-    freight_result = logistics_sdk.move_to_freight([shipment.package_id])
+        logistics_result = await agent_logistics(package)
+        shipment = logistics_result.output
 
-    return {
-        "package_ref": shipment.package_ref,
-        "classification": {
-            "content_description": shipment.content_description,
-            "hs_code": shipment.hs_code,
-            "origin_country": shipment.origin_country,
-        },
-        "customs": customs_result.output,
-        "freight": freight_result,
-    }
+        customs_result = await agent_customs(shipment)
+        with mlflow.start_span(name="move_to_freight", span_type="TOOL") as tool_span:
+            tool_span.set_inputs({"package_ids": [shipment.package_id]})
+            freight_result = logistics_sdk.move_to_freight([shipment.package_id])
+            tool_span.set_outputs({"result": freight_result})
+
+        output = {
+            "package_ref": shipment.package_ref,
+            "classification": {
+                "content_description": shipment.content_description,
+                "hs_code": shipment.hs_code,
+                "origin_country": shipment.origin_country,
+            },
+            "customs": customs_result.output,
+            "freight": freight_result,
+        }
+        span.set_outputs(output)
+        return output
 
 
 async def main():
+    # Configure tracing explicitly; pydantic-ai autologging remains disabled.
+    setup_mlflow(autolog=False)
     outputs = []
     packages = [
         package
