@@ -1,8 +1,6 @@
-from utils.evaluation.eval import EvaluationContext, EvaluationResult
-from utils.evaluation.runner import evaluate
+from utils.evaluation.mlflow import setup_mlflow, summarize_and_log
 
 __all__ = [
-    "EvaluationContext",
-    "EvaluationResult",
-    "evaluate",
+    "setup_mlflow",
+    "summarize_and_log",
 ]
