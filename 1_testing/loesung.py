@@ -11,8 +11,7 @@ from infrastructure.tools import ALL_TOOLS
 from utils.evaluation.mlflow import setup_mlflow
 from utils.models import get_chat_model
 from utils.prompts import BASE_SYSTEM_PROMPT
-
-ChatBasePathMiddleware = import_module("5_testing.web").ChatBasePathMiddleware
+from utils.chat_ui import ChatBasePathMiddleware
 
 # ---------------------------------------------------------------------------
 # MLFlow
