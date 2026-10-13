@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import sys
+from collections.abc import Awaitable, Callable
 from importlib import import_module
 from pathlib import Path
-import sys
-from typing import Awaitable, Callable
 
 import pytest
 
@@ -13,7 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 app = import_module("4_guardrails_and_robustness.loesung")
-from infrastructure import customs_sdk, logistics_sdk  # noqa: E402
+from infrastructure import customs_sdk, logistics_sdk
 
 PACKAGE_ID = 4
 

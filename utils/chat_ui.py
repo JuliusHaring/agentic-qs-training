@@ -104,7 +104,7 @@ class ChatBasePathMiddleware:
                 """
 
                 # Inject configuration before the frontend scripts execute.
-                html, count = re.subn(
+                html, _count = re.subn(
                     rb"(<head\b[^>]*>)",
                     lambda match: match.group(1) + config,
                     html,

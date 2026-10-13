@@ -6,6 +6,8 @@ from pydantic_ai import Tool
 
 from infrastructure import customs_sdk, logistics_sdk
 
+RecoverableToolError = RuntimeError | ValueError | TypeError | LookupError
+
 
 def _error_result(error: Exception, **context: object) -> dict[str, object]:
     return {"ok": False, "error": str(error), **context}
@@ -14,7 +16,7 @@ def _error_result(error: Exception, **context: object) -> dict[str, object]:
 def list_packages() -> list[dict[str, object]] | dict[str, object]:
     try:
         return logistics_sdk.list_packages()
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error)
 
 
@@ -31,42 +33,42 @@ def write_customs_details(
             hs_code,
             origin_country,
         )
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error, package_id=package_id)
 
 
 def move_to_freight(package_ids: list[int]) -> dict[str, object]:
     try:
         return logistics_sdk.move_to_freight(package_ids)
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error, package_ids=package_ids)
 
 
 def load_content_descriptions(items: list[dict[str, str]]) -> dict[str, object]:
     try:
         return customs_sdk.load_content_descriptions(items)
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error)
 
 
 def list_content_descriptions() -> list[dict[str, str]] | dict[str, object]:
     try:
         return customs_sdk.list_content_descriptions()
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error)
 
 
 def get_customs_book() -> dict[str, Any]:
     try:
         return customs_sdk.get_customs_book()
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error)
 
 
 def get_hs_code_dictionary() -> dict[str, Any]:
     try:
         return customs_sdk.get_hs_code_dictionary()
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error)
 
 
@@ -85,14 +87,14 @@ def create_customs_declaration(
             value_amount,
             customs_book_entry,
         )
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error, package_ref=package_ref)
 
 
 def list_customs_declarations() -> list[dict[str, object]] | dict[str, object]:
     try:
         return customs_sdk.list_customs_declarations()
-    except Exception as error:
+    except RecoverableToolError as error:
         return _error_result(error)
 
 

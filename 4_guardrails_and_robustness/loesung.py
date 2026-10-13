@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import Literal
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -328,7 +327,7 @@ async def process_package(package: dict[str, object]) -> dict[str, object]:
             "status": "needs_review",
             "reason": str(error),
         }
-    except Exception as error:
+    except (WorkflowError, RuntimeError, ValueError, TypeError, LookupError) as error:
         return {
             "package_ref": package_ref,
             "status": "failed",

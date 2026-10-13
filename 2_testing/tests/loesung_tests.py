@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from importlib import import_module
 from pathlib import Path
-import sys
 from typing import Any
 
 import pytest

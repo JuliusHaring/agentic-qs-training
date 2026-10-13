@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any
 
 import pytest
 
-import infrastructure.tools as tools
-
+from infrastructure import tools
 
 PACKAGE_ID = 4
 PACKAGE_REF = "PKG-4"
