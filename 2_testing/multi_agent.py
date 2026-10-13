@@ -8,15 +8,9 @@ from pydantic_ai_harness import InputBlocked, InputGuardrail
 from importlib import import_module
 
 from infrastructure.tools import ALL_TOOLS
-from utils.evaluation.mlflow import setup_mlflow
 from utils.models import get_chat_model
 from utils.prompts import BASE_SYSTEM_PROMPT
 from utils.chat_ui import ChatBasePathMiddleware
-
-# ---------------------------------------------------------------------------
-# MLFlow
-# ---------------------------------------------------------------------------
-setup_mlflow(autolog=True)
 
 # ---------------------------------------------------------------------------
 # Model

@@ -87,7 +87,9 @@ async def process_package(package):
         shipment = logistics_result.output
 
         customs_result = await agent_customs(shipment)
-        with mlflow.start_span(name="move_to_freight", span_type=SpanType.TOOL) as tool_span:
+        with mlflow.start_span(
+            name="move_to_freight", span_type=SpanType.TOOL
+        ) as tool_span:
             tool_span.set_inputs({"package_ids": [shipment.package_id]})
             freight_result = logistics_sdk.move_to_freight([shipment.package_id])
             tool_span.set_outputs({"result": freight_result})
