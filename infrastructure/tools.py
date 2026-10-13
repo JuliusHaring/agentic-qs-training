@@ -6,7 +6,7 @@ from pydantic_ai import Tool
 
 from infrastructure import customs_sdk, logistics_sdk
 
-RecoverableToolError = RuntimeError | ValueError | TypeError | LookupError
+RecoverableToolError = (RuntimeError, ValueError, TypeError, LookupError)
 
 
 def _error_result(error: Exception, **context: object) -> dict[str, object]:
