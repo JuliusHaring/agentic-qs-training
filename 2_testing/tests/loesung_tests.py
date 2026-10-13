@@ -16,7 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 shipment_app = import_module("2_testing.multi_agent")
-mock_module = import_module("2_testing.tests.loesung_mock")
+mock_module = import_module("2_testing.tests.mock")
 
 MockSDKs = mock_module.MockSDKs
 PACKAGE_ID = mock_module.PACKAGE_ID
