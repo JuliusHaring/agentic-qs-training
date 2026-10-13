@@ -107,7 +107,7 @@ app = ChatBasePathMiddleware(web_app)
 
 if __name__ == "__main__":
     uvicorn.run(
-        "5_testing.loesung:app",
+        "0_basics.chat:app",
         host="127.0.0.1",
         port=7932,
         reload=True,
