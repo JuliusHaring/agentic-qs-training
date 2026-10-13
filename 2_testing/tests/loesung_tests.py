@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 shipment_app = import_module("2_testing.multi_agent")
+tools_module = import_module("infrastructure.tools")
 mock_module = import_module("2_testing.tests.mock")
 
 MockSDKs = mock_module.MockSDKs
@@ -209,6 +210,70 @@ def test_failure_during_execution(mock_sdks: MockSDKs) -> None:
     assert mock_sdks.customs.declarations == []
     assert mock_sdks.logistics.call_count("move_to_freight") == 0
     assert "not moved" in result.output.lower()
+
+
+def test_external_logistics_tool_errors_are_returned_as_error_results(
+    mock_sdks: MockSDKs,
+) -> None:
+    original_write = mock_sdks.logistics.write_customs_details
+
+    def broken_write(
+        package_id: int,
+        content_description: str,
+        hs_code: str,
+        origin_country: str,
+    ) -> dict[str, object]:
+        raise RuntimeError("logistics backend unavailable")
+
+    mock_sdks.logistics.write_customs_details = broken_write  # type: ignore[method-assign]
+    result = tools_module.write_customs_details(
+        PACKAGE_ID,
+        str(PACKAGE_TRUTH["content_description"]),
+        str(PACKAGE_TRUTH["hs_code"]),
+        str(PACKAGE_TRUTH["origin_country"]),
+    )
+
+    assert result == {
+        "ok": False,
+        "error": "logistics backend unavailable",
+        "package_id": PACKAGE_ID,
+    }
+    assert mock_sdks.logistics.get_package(PACKAGE_ID)["customs_details"] is None
+
+    mock_sdks.logistics.write_customs_details = original_write  # type: ignore[method-assign]
+
+
+def test_external_customs_tool_errors_are_returned_as_error_results(
+    mock_sdks: MockSDKs,
+) -> None:
+    original_create = mock_sdks.customs.create_customs_declaration
+
+    def broken_create(
+        package_ref: str,
+        content_description: str,
+        destination_country: str,
+        value_amount: float,
+        customs_book_entry: str,
+    ) -> dict[str, object]:
+        raise RuntimeError("customs backend unavailable")
+
+    mock_sdks.customs.create_customs_declaration = broken_create  # type: ignore[method-assign]
+    result = tools_module.create_customs_declaration(
+        PACKAGE_REF,
+        str(PACKAGE_TRUTH["content_description"]),
+        str(PACKAGE_TRUTH["destination_country"]),
+        float(PACKAGE_TRUTH["declared_value"]),
+        str(PACKAGE_TRUTH["customs_book_entry"]),
+    )
+
+    assert result == {
+        "ok": False,
+        "error": "customs backend unavailable",
+        "package_ref": PACKAGE_REF,
+    }
+    assert mock_sdks.customs.declarations == []
+
+    mock_sdks.customs.create_customs_declaration = original_create  # type: ignore[method-assign]
 
 
 def main() -> int:
