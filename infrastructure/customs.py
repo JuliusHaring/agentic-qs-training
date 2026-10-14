@@ -234,9 +234,11 @@ def evaluate_package_classification(package_id: int) -> dict[str, object]:
 
 def create_customs_declaration(payload: DeclarationRequest) -> DeclareResponse:
     loaded_description = customs_store.loaded_descriptions.get(payload.package_ref)
-    if loaded_description is None or str(
-        loaded_description.get("content_description", "")
-    ).lower() != payload.content_description.lower():
+    if (
+        loaded_description is None
+        or str(loaded_description.get("content_description", "")).lower()
+        != payload.content_description.lower()
+    ):
         customs_store.loaded_descriptions[payload.package_ref] = {
             "package_ref": payload.package_ref,
             "content_description": payload.content_description,

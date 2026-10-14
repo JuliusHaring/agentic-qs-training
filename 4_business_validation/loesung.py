@@ -45,18 +45,24 @@ def block_prohibited_handoff(shipment: LogisticsHandoff) -> GuardrailResult:
 
 def allow_customs_tools_only(tool_call: ToolCallInfo) -> GuardrailResult:
     if tool_call.name == "move_to_freight":
-        return GuardrailResult.block("Freight move is only allowed after validation in code.")
+        return GuardrailResult.block(
+            "Freight move is only allowed after validation in code."
+        )
     return GuardrailResult.allow()
 
 
-def customs_complete(shipment: LogisticsHandoff) -> tuple[bool, str | None, dict[str, object] | None]:
+def customs_complete(
+    shipment: LogisticsHandoff,
+) -> tuple[bool, str | None, dict[str, object] | None]:
     descriptions = customs_sdk.list_content_descriptions()
     declarations = customs_sdk.list_customs_declarations()
     description = next(
-        (item for item in descriptions if item["package_ref"] == shipment.package_ref), None
+        (item for item in descriptions if item["package_ref"] == shipment.package_ref),
+        None,
     )
     declaration = next(
-        (item for item in declarations if item["package_ref"] == shipment.package_ref), None
+        (item for item in declarations if item["package_ref"] == shipment.package_ref),
+        None,
     )
 
     if description is None:
