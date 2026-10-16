@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 
+import os
+
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 # ---------------------------------------------------------------------------
@@ -12,7 +14,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 class ChatBasePathMiddleware:
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
-        self.base_path = "/proxy/7932"
+        self.base_path = f"/{os.environ.get('PARTICIPANT_NAME')}/proxy/7932"
 
     async def __call__(
         self,
@@ -57,51 +59,51 @@ class ChatBasePathMiddleware:
                 assert response_start is not None
                 html = b"".join(body_chunks)
 
-                config = b"""
+                config = f"""
                 <script>
-                (() => {
-                    const prefix = "/proxy/7932";
+                (() => {{
+                    const prefix = {self.base_path!r};
                     const originalFetch = window.fetch;
 
-                    function rewriteUrl(value) {
+                    function rewriteUrl(value) {{
                         const url = new URL(value, window.location.href);
 
                         if (
                             url.origin === window.location.origin &&
                             (url.pathname === "/api" || url.pathname.startsWith("/api/"))
-                        ) {
+                        ) {{
                             url.pathname = prefix + url.pathname;
-                        }
+                        }}
 
                         return url.href;
-                    }
+                    }}
 
-                    window.fetch = function(input, init) {
-                        if (input instanceof Request) {
+                    window.fetch = function(input, init) {{
+                        if (input instanceof Request) {{
                             const url = rewriteUrl(input.url);
 
-                            if (url !== input.url) {
+                            if (url !== input.url) {{
                                 input = new Request(url, input);
-                            }
-                        } else {
+                            }}
+                        }} else {{
                             input = rewriteUrl(String(input));
-                        }
+                        }}
 
                         return originalFetch.call(this, input, init);
-                    };
+                    }};
 
                     const originalOpen = XMLHttpRequest.prototype.open;
 
                     XMLHttpRequest.prototype.open = function(
                         method, url, ...args
-                    ) {
+                    ) {{
                         return originalOpen.call(
                             this, method, rewriteUrl(String(url)), ...args
                         );
-                    };
-                })();
+                    }};
+                }})();
                 </script>
-                """
+                """.encode()
 
                 # Inject configuration before the frontend scripts execute.
                 html, _count = re.subn(
