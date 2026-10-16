@@ -93,7 +93,7 @@ web_app = agent.to_web(
     allowed_hosts=[
         "127.0.0.1",
         "localhost",
-        "*.training.juliusharing.com",
+        "training.juliusharing.com",
     ],
 )
 
