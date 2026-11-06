@@ -1,108 +1,118 @@
-"""Chapter 1 — Tracing and Observability (solution)
-
-Wraps the chapter 0 harness with MLflow spans and a shared session_id.
-"""
+"""Chapter 1 — Tracing and Observability (solution)"""
 
 from __future__ import annotations
 
 import asyncio
 import os
 import uuid
-from importlib import import_module
 
 import mlflow
 from mlflow.entities import SpanType
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 from tqdm import tqdm
 
 from infrastructure import helpdesk_sdk
+from infrastructure.tools import REPLY_TOOLS, TRIAGE_TOOLS
 from utils.mlflow import setup_mlflow, summarize_and_log
+from utils.models import get_chat_model
 
-ch0 = import_module("0_agent_harness.loesung")
-
-SESSION_ID = (
-    f"{os.environ.get('PARTICIPANT_NAME', 'local')}-helpdesk-{uuid.uuid4().hex[:8]}"
-)
+model = get_chat_model()
+TICKET_IDS = [1, 2, 3]
 
 
-async def traced_agent_triage(ticket: dict[str, object]):
+class TriageResult(BaseModel):
+    ticket_id: int
+    category: str
+    priority: str
+    reason: str = Field(description="One-sentence justification")
+
+
+def create_session_id() -> str:
+    participant = os.environ.get("PARTICIPANT_NAME", "local")
+    return f"{participant}-trace-{uuid.uuid4().hex[:8]}"
+
+
+SESSION_ID = create_session_id()
+
+
+async def agent_triage(ticket: dict[str, object]):
+    prompt = f"""Triage this ticket and call classify_ticket (needs_human=false):
+
+{ticket}"""
+    agent = Agent(
+        model=model,
+        system_prompt="Classify one support ticket using tools.",
+        tools=TRIAGE_TOOLS,
+        output_type=TriageResult,
+    )
     with mlflow.start_span(name="agent_triage", span_type=SpanType.AGENT) as span:
-        span.set_inputs({"ticket": ticket})
-        result = await ch0.agent_triage(ticket)
+        span.set_inputs({"ticket_id": ticket["id"]})
+        result = await agent.run(prompt)
         span.set_outputs(result.output.model_dump())
         return result
 
 
-async def traced_agent_reply(ticket: dict[str, object], triage):
+async def agent_reply(ticket: dict[str, object], triage: TriageResult):
+    prompt = f"""Search the knowledge base and write_reply for ticket {triage.ticket_id}.
+
+Ticket: {ticket}
+Do not resolve."""
+    agent = Agent(
+        model=model,
+        system_prompt="Write one short support reply using the knowledge base.",
+        tools=REPLY_TOOLS,
+    )
     with mlflow.start_span(name="agent_reply", span_type=SpanType.AGENT) as span:
-        span.set_inputs({"ticket": ticket, "triage": triage.model_dump()})
-        result = await ch0.agent_reply(ticket, triage)
-        span.set_outputs({"response": result.output})
+        span.set_inputs({"ticket_id": ticket["id"], "triage": triage.model_dump()})
+        result = await agent.run(prompt)
+        span.set_outputs({"reply": result.output})
         return result
+
+
+def resolve_with_trace(ticket_id: int) -> dict[str, object]:
+    with mlflow.start_span(name="resolve_ticket", span_type=SpanType.TOOL) as span:
+        span.set_inputs({"ticket_id": ticket_id})
+        resolved = helpdesk_sdk.resolve_ticket(ticket_id)
+        span.set_outputs({"result": resolved})
+        return resolved
 
 
 async def process_ticket(ticket: dict[str, object]) -> dict[str, object]:
     with mlflow.start_span(name="process_ticket", span_type=SpanType.CHAIN) as span:
-        mlflow.update_current_trace(session_id=SESSION_ID)
+        mlflow.update_current_trace(
+            session_id=SESSION_ID,
+            tags={"ticket_id": str(ticket["id"])},
+        )
         span.set_inputs({"ticket": ticket})
-
-        triage_result = await traced_agent_triage(ticket)
-        triage = triage_result.output
-
-        if triage.needs_human:
-            with mlflow.start_span(
-                name="escalate_ticket", span_type=SpanType.TOOL
-            ) as tool_span:
-                tool_span.set_inputs(
-                    {"ticket_id": triage.ticket_id, "reason": triage.reason}
-                )
-                escalated = helpdesk_sdk.escalate_ticket(
-                    triage.ticket_id,
-                    reason=triage.reason or "Needs human review",
-                )
-                tool_span.set_outputs({"result": escalated})
+        try:
+            triage_result = await agent_triage(ticket)
+            triage = triage_result.output
+            reply_result = await agent_reply(ticket, triage)
+            resolved = resolve_with_trace(triage.ticket_id)
             output = {
                 "ticket_id": triage.ticket_id,
                 "triage": triage.model_dump(),
-                "outcome": "escalated",
-                "result": escalated,
-            }
-        else:
-            reply_result = await traced_agent_reply(ticket, triage)
-            with mlflow.start_span(
-                name="resolve_ticket", span_type=SpanType.TOOL
-            ) as tool_span:
-                tool_span.set_inputs({"ticket_id": triage.ticket_id})
-                resolved = helpdesk_sdk.resolve_ticket(triage.ticket_id)
-                tool_span.set_outputs({"result": resolved})
-            output = {
-                "ticket_id": triage.ticket_id,
-                "triage": triage.model_dump(),
-                "outcome": "resolved",
                 "reply": reply_result.output,
                 "result": resolved,
             }
-
-        span.set_outputs(output)
-        return output
+            span.set_outputs(output)
+            return output
+        except Exception as error:
+            span.set_status("ERROR")
+            span.set_outputs({"error": str(error)})
+            raise
 
 
 async def main() -> dict[str, object]:
     setup_mlflow(autolog=False)
-
-    tickets = helpdesk_sdk.list_tickets(status="open")
+    tickets = [helpdesk_sdk.get_ticket(ticket_id) for ticket_id in TICKET_IDS]
     outputs = []
-    for ticket in tqdm(tickets, desc="Processing tickets"):
+    for ticket in tqdm(tickets, desc="Tracing tickets"):
         outputs.append(await process_ticket(ticket))
 
-    summary = summarize_and_log(
-        [int(ticket["id"]) for ticket in tickets],
-        name="1_tracing_observability",
-    )
-    return {
-        "outputs": outputs,
-        "summary": summary,
-        "session_id": SESSION_ID,
-    }
+    summary = summarize_and_log(TICKET_IDS, name="1_tracing_observability")
+    return {"outputs": outputs, "summary": summary, "session_id": SESSION_ID}
 
 
 if __name__ == "__main__":

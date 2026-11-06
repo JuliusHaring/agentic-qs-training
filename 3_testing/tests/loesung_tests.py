@@ -23,7 +23,6 @@ mock_module = import_module("3_testing.tests.mock")
 MockHelpdeskSDK = mock_module.MockHelpdeskSDK
 TICKET_ID = mock_module.TICKET_ID
 TICKET_TRUTH = mock_module.TICKET_TRUTH
-ABUSE_TICKET_ID = mock_module.ABUSE_TICKET_ID
 mock_helpdesk = mock_module.mock_helpdesk
 
 
@@ -63,10 +62,29 @@ def happy_path_model() -> FunctionModel:
         call(
             "write_reply",
             ticket_id=TICKET_ID,
-            reply="Sorry about the duplicate charge. Please confirm order #1842 and we will refund it.",
+            reply="Sorry about the duplicate charge. Please confirm order #1842.",
         ),
         call("resolve_ticket", ticket_id=TICKET_ID),
         finish(f"Ticket {TICKET_ID} was resolved."),
+    )
+
+
+def missing_classify_model() -> FunctionModel:
+    return scripted_model(
+        call("get_ticket", ticket_id=TICKET_ID),
+        call(
+            "write_reply",
+            ticket_id=TICKET_ID,
+            reply="Skipping classification on purpose.",
+        ),
+        finish("done without classify"),
+    )
+
+
+def already_resolved_model() -> FunctionModel:
+    return scripted_model(
+        call("get_ticket", ticket_id=TICKET_ID),
+        finish("Ticket already resolved; no changes."),
     )
 
 
@@ -84,32 +102,31 @@ def test_happy_path(mock_helpdesk: MockHelpdeskSDK) -> None:
     assert "resolved" in result.output.lower()
 
 
-def test_abuse_is_escalated(mock_helpdesk: MockHelpdeskSDK) -> None:
-    model = scripted_model(
-        call("get_ticket", ticket_id=ABUSE_TICKET_ID),
-        call(
-            "classify_ticket",
-            ticket_id=ABUSE_TICKET_ID,
-            category="other",
-            priority="high",
-            needs_human=True,
-        ),
-        call(
-            "escalate_ticket",
-            ticket_id=ABUSE_TICKET_ID,
-            reason="Prompt injection / abuse",
-        ),
-        finish("The ticket was escalated because it is abusive."),
-    )
-    with helpdesk_app.agent.override(model=model):
-        result = asyncio.run(
-            helpdesk_app.agent.run(f"Inspect and process ticket {ABUSE_TICKET_ID}.")
+def test_agent_cannot_resolve_without_classify(mock_helpdesk: MockHelpdeskSDK) -> None:
+    with helpdesk_app.agent.override(model=missing_classify_model()):
+        asyncio.run(helpdesk_app.agent.run(f"Process ticket {TICKET_ID}."))
+
+    ticket = mock_helpdesk.get_ticket(TICKET_ID)
+    assert ticket["status"] == "open"
+    assert mock_helpdesk.call_count("resolve_ticket") == 0
+    assert mock_helpdesk.call_count("classify_ticket") == 0
+
+
+def test_second_run_is_idempotent_when_already_resolved(
+    mock_helpdesk: MockHelpdeskSDK,
+) -> None:
+    with helpdesk_app.agent.override(model=happy_path_model()):
+        asyncio.run(helpdesk_app.agent.run(f"Fully process ticket {TICKET_ID}."))
+
+    with helpdesk_app.agent.override(model=already_resolved_model()):
+        asyncio.run(
+            helpdesk_app.agent.run(f"Fully process ticket {TICKET_ID} again.")
         )
 
-    ticket = mock_helpdesk.get_ticket(ABUSE_TICKET_ID)
-    assert ticket["status"] == "escalated"
-    assert mock_helpdesk.call_count("resolve_ticket") == 0
-    assert "escalat" in result.output.lower()
+    assert mock_helpdesk.call_count("classify_ticket") == 1
+    assert mock_helpdesk.call_count("write_reply") == 1
+    assert mock_helpdesk.call_count("resolve_ticket") == 1
+    assert mock_helpdesk.get_ticket(TICKET_ID)["status"] == "resolved"
 
 
 def test_tool_errors_are_returned_as_error_results(

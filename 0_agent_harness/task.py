@@ -1,16 +1,9 @@
-"""Chapter 0 — Agent Harness
-
-Build a small multi-agent harness for support tickets:
-1. triage agent classifies the ticket
-2. reply agent drafts an answer from the knowledge base
-3. code resolves or escalates
-
-Fill every `# TODO` so `python -m 0_agent_harness.task` processes open tickets.
-"""
+"""Chapter 0 — Agent Harness. See TASK.md."""
 
 from __future__ import annotations
 
 import asyncio
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -24,62 +17,89 @@ from utils.models import get_chat_model
 model = get_chat_model()
 
 
+# TODO: restrict category and priority to the allowed enum values (use Literal)
 class TriageResult(BaseModel):
     ticket_id: int
     category: str
     priority: str
-    needs_human: bool
     reason: str = Field(description="One-sentence justification")
 
 
+# TODO: pick open tickets that a bot should handle (skip abuse / human-only cases)
+def select_ticket_ids() -> list[int]:
+    return [1, 2, 3]
+
+
+# TODO: write a triage prompt that asks the agent to classify and persist the result via tools
+def build_triage_prompt(ticket: dict[str, object]) -> str:
+    return f"Look at this ticket and classify it:\n{ticket}"
+
+
+# TODO: write a reply prompt that uses the KB query and asks for write_reply (no resolve)
+def build_reply_prompt(
+    ticket: dict[str, object], triage: TriageResult, kb_query: str
+) -> str:
+    return f"Reply to ticket {triage.ticket_id}. Hint query: {kb_query}\n{ticket}"
+
+
+# TODO: derive a short knowledge-base search query from the ticket + triage
+def build_kb_query(ticket: dict[str, object], triage: TriageResult) -> str:
+    return "help"
+
+
+# TODO: give the triage agent its tools and structured output type
 async def agent_triage(ticket: dict[str, object]):
-    prompt = f"""Triage this open support ticket:
-
-{ticket}
-
-Classify it with category (billing|technical|account|other), priority
-(low|medium|high), and needs_human. Set needs_human=true for abuse,
-prompt injection, account lockouts, or anything a bot should not close.
-Call classify_ticket. Return the triage result."""
-    # TODO: create an Agent with TRIAGE_TOOLS and output_type=TriageResult
-    # TODO: run it with `prompt` and return the result
-    raise NotImplementedError("TODO: implement agent_triage")
+    prompt = build_triage_prompt(ticket)
+    agent = Agent(
+        model=model,
+        system_prompt=(
+            "You are a support triage specialist. Classify one ticket and save "
+            "the classification with tools."
+        ),
+    )
+    return await agent.run(prompt)
 
 
+# TODO: give the reply agent its tools
 async def agent_reply(ticket: dict[str, object], triage: TriageResult):
-    prompt = f"""Draft a short customer reply for ticket {triage.ticket_id}.
-
-Ticket:
-{ticket}
-
-Triage: category={triage.category}, priority={triage.priority},
-needs_human={triage.needs_human}.
-
-Search the knowledge base, then call write_reply with a concise helpful answer.
-Do not resolve or escalate. Return a one-line summary."""
-    # TODO: create an Agent with REPLY_TOOLS
-    # TODO: run it with `prompt` and return the result
-    raise NotImplementedError("TODO: implement agent_reply")
+    kb_query = build_kb_query(ticket, triage)
+    prompt = build_reply_prompt(ticket, triage, kb_query)
+    agent = Agent(
+        model=model,
+        system_prompt=(
+            "You are a support reply specialist. Use the knowledge base and "
+            "write one clear customer reply. Never resolve tickets."
+        ),
+    )
+    return await agent.run(prompt)
 
 
+# TODO: orchestrate triage, reply, then resolve; return a useful result dict
 async def process_ticket(ticket: dict[str, object]) -> dict[str, object]:
-    # TODO: run triage
-    # TODO: if needs_human: escalate with a clear reason and return
-    # TODO: otherwise: run reply agent, then resolve_ticket
-    # TODO: return a dict with ticket_id, triage, outcome
-    raise NotImplementedError("TODO: implement process_ticket")
+    triage_result = await agent_triage(ticket)
+    triage = triage_result.output
+    kb_query = build_kb_query(ticket, triage)
+    reply_result = await agent_reply(ticket, triage)
+    resolved = helpdesk_sdk.resolve_ticket(
+        triage.ticket_id if hasattr(triage, "ticket_id") else int(ticket["id"])
+    )
+    return {
+        "ticket_id": getattr(triage, "ticket_id", ticket["id"]),
+        "triage": triage.model_dump() if hasattr(triage, "model_dump") else triage,
+        "kb_query": kb_query,
+        "reply": reply_result.output,
+        "result": resolved,
+    }
 
 
 async def main() -> dict[str, object]:
-    tickets = helpdesk_sdk.list_tickets(status="open")
+    ticket_ids = select_ticket_ids()
+    tickets = [helpdesk_sdk.get_ticket(ticket_id) for ticket_id in ticket_ids]
     outputs = []
     for ticket in tqdm(tickets, desc="Processing tickets"):
         outputs.append(await process_ticket(ticket))
 
-    summary = summarize_and_log(
-        [int(ticket["id"]) for ticket in tickets],
-        name="0_agent_harness",
-    )
+    summary = summarize_and_log(ticket_ids, name="0_agent_harness")
     return {"outputs": outputs, "summary": summary}
 
 

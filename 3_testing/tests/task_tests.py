@@ -1,11 +1,4 @@
-"""Chapter 3 — Testing (participant task)
-
-Write deterministic tests for the helpdesk agent using scripted model responses
-and the mock SDK fixture.
-
-Fill every `# TODO`, then run:
-  python -m 3_testing.tests.task_tests
-"""
+"""Chapter 3 — Testing. See ../TASK.md."""
 
 from __future__ import annotations
 
@@ -30,7 +23,6 @@ mock_module = import_module("3_testing.tests.mock")
 MockHelpdeskSDK = mock_module.MockHelpdeskSDK
 TICKET_ID = mock_module.TICKET_ID
 TICKET_TRUTH = mock_module.TICKET_TRUTH
-ABUSE_TICKET_ID = mock_module.ABUSE_TICKET_ID
 mock_helpdesk = mock_module.mock_helpdesk
 
 
@@ -56,55 +48,38 @@ def finish(text: str) -> ModelResponse:
     return ModelResponse(parts=[TextPart(text)])
 
 
+# TODO: script the full successful tool sequence for one ticket, then finish
 def happy_path_model() -> FunctionModel:
     return scripted_model(
-        call("get_ticket", ticket_id=TICKET_ID),
-        call(
-            "classify_ticket",
-            ticket_id=TICKET_ID,
-            category=TICKET_TRUTH["category"],
-            priority=TICKET_TRUTH["priority"],
-            needs_human=False,
-        ),
-        call("search_knowledge_base", query="refund"),
-        call(
-            "write_reply",
-            ticket_id=TICKET_ID,
-            reply="Sorry about the duplicate charge. Please confirm order #1842 and we will refund it.",
-        ),
-        call("resolve_ticket", ticket_id=TICKET_ID),
-        finish(f"Ticket {TICKET_ID} was resolved."),
+        finish(f"Ticket {TICKET_ID} skipped — replace with full tool sequence."),
     )
 
 
+# TODO: script a path that never classifies (so resolve must not happen)
+def missing_classify_model() -> FunctionModel:
+    return scripted_model(
+        finish("done without classify"),
+    )
+
+
+# TODO: run the agent with happy_path_model and assert the ticket ended up correctly resolved
 def test_happy_path(mock_helpdesk: MockHelpdeskSDK) -> None:
-    # TODO: override helpdesk_app.agent with happy_path_model()
-    # TODO: run the agent asking to fully process TICKET_ID
-    # TODO: assert status resolved, category/priority match truth, reply present
-    raise NotImplementedError("TODO: implement test_happy_path")
+    pass
 
 
-def test_abuse_is_escalated(mock_helpdesk: MockHelpdeskSDK) -> None:
-    model = scripted_model(
-        call("get_ticket", ticket_id=ABUSE_TICKET_ID),
-        call(
-            "classify_ticket",
-            ticket_id=ABUSE_TICKET_ID,
-            category="other",
-            priority="high",
-            needs_human=True,
-        ),
-        call(
-            "escalate_ticket",
-            ticket_id=ABUSE_TICKET_ID,
-            reason="Prompt injection / abuse",
-        ),
-        finish("The ticket was escalated because it is abusive."),
-    )
-    # TODO: override agent with `model`, run it, assert escalated and never resolved
-    raise NotImplementedError("TODO: implement test_abuse_is_escalated")
+# TODO: run with missing_classify_model and assert nothing was resolved
+def test_agent_cannot_resolve_without_classify(mock_helpdesk: MockHelpdeskSDK) -> None:
+    pass
 
 
+# TODO: process once, then again; mutating tools should not run a second time
+def test_second_run_is_idempotent_when_already_resolved(
+    mock_helpdesk: MockHelpdeskSDK,
+) -> None:
+    pass
+
+
+# TODO: make resolve fail in the mock and assert the tool wrapper returns an error result
 def test_tool_errors_are_returned_as_error_results(
     mock_helpdesk: MockHelpdeskSDK,
 ) -> None:
@@ -112,9 +87,6 @@ def test_tool_errors_are_returned_as_error_results(
         raise RuntimeError("helpdesk backend unavailable")
 
     mock_helpdesk.resolve_ticket = broken_resolve  # type: ignore[method-assign]
-    # TODO: call tools_module.resolve_ticket(TICKET_ID)
-    # TODO: assert {"ok": False, "error": ..., "ticket_id": TICKET_ID}
-    raise NotImplementedError("TODO: implement test_tool_errors_are_returned_as_error_results")
 
 
 def main() -> int:

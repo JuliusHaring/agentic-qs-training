@@ -1,76 +1,100 @@
-"""Chapter 1 — Tracing and Observability
-
-Reuse the chapter 0 harness. Do not rebuild triage/reply agents.
-
-Your job:
-1. Wrap each step in an MLflow span (process_ticket → triage / reply / close)
-2. Attach a shared session_id so all ticket traces group as one session
-
-Fill every `# TODO`. Run with `python -m 1_tracing_observability.task`.
-"""
+"""Chapter 1 — Tracing and Observability. See TASK.md."""
 
 from __future__ import annotations
 
 import asyncio
 import os
 import uuid
-from importlib import import_module
 
 import mlflow
 from mlflow.entities import SpanType
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 from tqdm import tqdm
 
 from infrastructure import helpdesk_sdk
+from infrastructure.tools import REPLY_TOOLS, TRIAGE_TOOLS
 from utils.mlflow import setup_mlflow, summarize_and_log
+from utils.models import get_chat_model
 
-# Working harness from chapter 0 — do not reimplement these.
-ch0 = import_module("0_agent_harness.loesung")
-
-SESSION_ID = (
-    f"{os.environ.get('PARTICIPANT_NAME', 'local')}-helpdesk-{uuid.uuid4().hex[:8]}"
-)
+model = get_chat_model()
+TICKET_IDS = [1, 2, 3]
 
 
-async def traced_agent_triage(ticket: dict[str, object]):
-    # TODO: start an MLflow span named "agent_triage" (SpanType.AGENT)
-    # TODO: set inputs, await ch0.agent_triage(ticket), set outputs, return result
-    raise NotImplementedError("TODO: span around ch0.agent_triage")
+class TriageResult(BaseModel):
+    ticket_id: int
+    category: str
+    priority: str
+    reason: str = Field(description="One-sentence justification")
 
 
-async def traced_agent_reply(ticket: dict[str, object], triage):
-    # TODO: start an MLflow span named "agent_reply" (SpanType.AGENT)
-    # TODO: set inputs, await ch0.agent_reply(ticket, triage), set outputs, return result
-    raise NotImplementedError("TODO: span around ch0.agent_reply")
+# TODO: build a session id that groups all traces from this run (include participant name)
+def create_session_id() -> str:
+    return "local-session"
+
+
+SESSION_ID = create_session_id()
+
+
+async def agent_triage(ticket: dict[str, object]):
+    prompt = f"""Triage this ticket and call classify_ticket (needs_human=false):
+
+{ticket}"""
+    agent = Agent(
+        model=model,
+        system_prompt="Classify one support ticket using tools.",
+        tools=TRIAGE_TOOLS,
+        output_type=TriageResult,
+    )
+    # TODO: wrap this agent call in an MLflow span and record useful inputs/outputs
+    return await agent.run(prompt)
+
+
+async def agent_reply(ticket: dict[str, object], triage: TriageResult):
+    prompt = f"""Search the knowledge base and write_reply for ticket {triage.ticket_id}.
+
+Ticket: {ticket}
+Do not resolve."""
+    agent = Agent(
+        model=model,
+        system_prompt="Write one short support reply using the knowledge base.",
+        tools=REPLY_TOOLS,
+    )
+    # TODO: wrap this agent call in an MLflow span and record useful inputs/outputs
+    return await agent.run(prompt)
+
+
+# TODO: wrap the resolve call in an MLflow span (tool-level) and record inputs/outputs
+def resolve_with_trace(ticket_id: int) -> dict[str, object]:
+    return helpdesk_sdk.resolve_ticket(ticket_id)
 
 
 async def process_ticket(ticket: dict[str, object]) -> dict[str, object]:
-    # TODO: start parent span "process_ticket" (SpanType.CHAIN)
-    # TODO: call mlflow.update_current_trace(session_id=SESSION_ID)
-    # TODO: set span inputs from ticket
-    # TODO: triage = (await traced_agent_triage(ticket)).output
-    # TODO: if needs_human: TOOL span "escalate_ticket" → helpdesk_sdk.escalate_ticket
-    # TODO: else: traced_agent_reply, then TOOL span "resolve_ticket"
-    # TODO: set parent span outputs and return the result dict
-    raise NotImplementedError("TODO: traced process_ticket with session_id")
+    # TODO: wrap the whole ticket flow in a parent MLflow span
+    # TODO: attach the shared session id (and a ticket tag) to the current trace
+    # TODO: mark the span as failed if something raises, then re-raise
+    triage_result = await agent_triage(ticket)
+    triage = triage_result.output
+    reply_result = await agent_reply(ticket, triage)
+    resolved = resolve_with_trace(triage.ticket_id)
+    return {
+        "ticket_id": triage.ticket_id,
+        "triage": triage.model_dump(),
+        "reply": reply_result.output,
+        "result": resolved,
+    }
 
 
 async def main() -> dict[str, object]:
+    # TODO: configure MLflow for this chapter (no pydantic-ai autolog)
     setup_mlflow(autolog=False)
-
-    tickets = helpdesk_sdk.list_tickets(status="open")
+    tickets = [helpdesk_sdk.get_ticket(ticket_id) for ticket_id in TICKET_IDS]
     outputs = []
-    for ticket in tqdm(tickets, desc="Processing tickets"):
+    for ticket in tqdm(tickets, desc="Tracing tickets"):
         outputs.append(await process_ticket(ticket))
 
-    summary = summarize_and_log(
-        [int(ticket["id"]) for ticket in tickets],
-        name="1_tracing_observability",
-    )
-    return {
-        "outputs": outputs,
-        "summary": summary,
-        "session_id": SESSION_ID,
-    }
+    summary = summarize_and_log(TICKET_IDS, name="1_tracing_observability")
+    return {"outputs": outputs, "summary": summary, "session_id": SESSION_ID}
 
 
 if __name__ == "__main__":

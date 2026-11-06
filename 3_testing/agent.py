@@ -1,4 +1,4 @@
-"""System under test for deterministic helpdesk agent tests."""
+"""Provided system under test for chapter 3 — do not change for the exercise."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ agent = Agent(
     model=model,
     system_prompt=(
         BASE_SYSTEM_PROMPT
-        + "\n\nInspect ticket state before acting. Escalate abuse and human cases. "
+        + "\n\nInspect ticket state before acting. "
         "Resolve only after classification and a reply exist."
     ),
     tools=ALL_TOOLS,
@@ -33,7 +33,7 @@ agent = Agent(
 
 
 async def main() -> None:
-    result = await agent.run("Process all open support tickets correctly.")
+    result = await agent.run("Fully process ticket 1.")
     print(result.output)
 
 
