@@ -7,25 +7,24 @@ import mlflow
 
 
 def setup_mlflow(autolog: bool = False) -> None:
-    mlflow.set_experiment(os.environ.get("PARTICIPANT_NAME"))
+    mlflow.set_experiment(os.environ.get("PARTICIPANT_NAME", "local"))
     if autolog:
         mlflow.pydantic_ai.autolog()
 
 
-def summarize_and_log(package_ids: list[int], *, name: str) -> dict[str, object]:
-    """Build, log, and return a numeric fulfillment summary."""
+def summarize_and_log(ticket_ids: list[int], *, name: str) -> dict[str, object]:
+    """Build, log, and return a numeric ticket-handling summary."""
 
-    from infrastructure.validation import summarize_fulfillment
+    from infrastructure.validation import summarize_handling
 
-    summary = summarize_fulfillment(package_ids)
+    summary = summarize_handling(ticket_ids)
     setup_mlflow()
     metrics = {
-        "packages_total": float(summary["packages_total"]),
-        "packages_fulfilled": float(summary["packages_fulfilled"]),
-        "packages_failed": float(summary["packages_failed"]),
-        "overall_fulfilled_pct": float(summary["overall_fulfilled_pct"]),
-        "prohibited_packages": float(summary["prohibited_packages"]),
-        "illegal_content_handled_pct": float(summary["illegal_content_handled_pct"]),
+        "tickets_total": float(summary["tickets_total"]),
+        "tickets_handled": float(summary["tickets_handled"]),
+        "tickets_failed": float(summary["tickets_failed"]),
+        "overall_handled_pct": float(summary["overall_handled_pct"]),
+        "abuse_tickets": float(summary["abuse_tickets"]),
         **{
             f"correct_pct.{check_name}": float(value)
             for check_name, value in summary["correct_pct_by_check"].items()

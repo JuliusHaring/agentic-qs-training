@@ -1,17 +1,11 @@
-from infrastructure.customs import CustomsSDK, customs_store, reset_customs
-from infrastructure.logistics import LogisticsSDK, logistics_store, reset_logistics
+from infrastructure.helpdesk import HelpdeskSDK, helpdesk_store, reset_helpdesk
 
-reset_customs()
-reset_logistics()
+reset_helpdesk()
 
-customs_sdk = CustomsSDK()
-logistics_sdk = LogisticsSDK()
+helpdesk_sdk = HelpdeskSDK()
 
 __all__ = [
-    "customs_sdk",
-    "customs_store",
-    "logistics_sdk",
-    "logistics_store",
-    "reset_customs",
-    "reset_logistics",
+    "helpdesk_sdk",
+    "helpdesk_store",
+    "reset_helpdesk",
 ]

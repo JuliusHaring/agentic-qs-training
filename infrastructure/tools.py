@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic_ai import Tool
 
-from infrastructure import customs_sdk, logistics_sdk
+from infrastructure import helpdesk_sdk
 
 RecoverableToolError = (RuntimeError, ValueError, TypeError, LookupError)
 
@@ -13,150 +11,132 @@ def _error_result(error: Exception, **context: object) -> dict[str, object]:
     return {"ok": False, "error": str(error), **context}
 
 
-def list_packages() -> list[dict[str, object]] | dict[str, object]:
+def list_open_tickets() -> list[dict[str, object]] | dict[str, object]:
     try:
-        return logistics_sdk.list_packages()
+        return helpdesk_sdk.list_tickets(status="open")
     except RecoverableToolError as error:
         return _error_result(error)
 
 
-def write_customs_details(
-    package_id: int,
-    content_description: str,
-    hs_code: str,
-    origin_country: str,
+def get_ticket(ticket_id: int) -> dict[str, object]:
+    try:
+        return helpdesk_sdk.get_ticket(ticket_id)
+    except RecoverableToolError as error:
+        return _error_result(error, ticket_id=ticket_id)
+
+
+def search_knowledge_base(query: str) -> list[dict[str, object]] | dict[str, object]:
+    try:
+        return helpdesk_sdk.search_knowledge_base(query)
+    except RecoverableToolError as error:
+        return _error_result(error, query=query)
+
+
+def classify_ticket(
+    ticket_id: int,
+    category: str,
+    priority: str,
+    needs_human: bool = False,
 ) -> dict[str, object]:
     try:
-        return logistics_sdk.write_customs_details(
-            package_id,
-            content_description,
-            hs_code,
-            origin_country,
+        return helpdesk_sdk.classify_ticket(
+            ticket_id=ticket_id,
+            category=category,  # type: ignore[arg-type]
+            priority=priority,  # type: ignore[arg-type]
+            needs_human=needs_human,
         )
     except RecoverableToolError as error:
-        return _error_result(error, package_id=package_id)
+        return _error_result(error, ticket_id=ticket_id)
 
 
-def move_to_freight(package_ids: list[int]) -> dict[str, object]:
+def write_reply(ticket_id: int, reply: str) -> dict[str, object]:
     try:
-        return logistics_sdk.move_to_freight(package_ids)
+        return helpdesk_sdk.write_reply(ticket_id=ticket_id, reply=reply)
     except RecoverableToolError as error:
-        return _error_result(error, package_ids=package_ids)
+        return _error_result(error, ticket_id=ticket_id)
 
 
-def load_content_descriptions(items: list[dict[str, str]]) -> dict[str, object]:
+def resolve_ticket(ticket_id: int) -> dict[str, object]:
     try:
-        return customs_sdk.load_content_descriptions(items)
+        return helpdesk_sdk.resolve_ticket(ticket_id)
     except RecoverableToolError as error:
-        return _error_result(error)
+        return _error_result(error, ticket_id=ticket_id)
 
 
-def list_content_descriptions() -> list[dict[str, str]] | dict[str, object]:
+def escalate_ticket(ticket_id: int, reason: str) -> dict[str, object]:
     try:
-        return customs_sdk.list_content_descriptions()
+        return helpdesk_sdk.escalate_ticket(ticket_id=ticket_id, reason=reason)
     except RecoverableToolError as error:
-        return _error_result(error)
+        return _error_result(error, ticket_id=ticket_id)
 
 
-def get_customs_book() -> dict[str, Any]:
-    try:
-        return customs_sdk.get_customs_book()
-    except RecoverableToolError as error:
-        return _error_result(error)
-
-
-def get_hs_code_dictionary() -> dict[str, Any]:
-    try:
-        return customs_sdk.get_hs_code_dictionary()
-    except RecoverableToolError as error:
-        return _error_result(error)
-
-
-def create_customs_declaration(
-    package_ref: str,
-    content_description: str,
-    destination_country: str,
-    value_amount: float,
-    customs_book_entry: str,
-) -> dict[str, object]:
-    try:
-        return customs_sdk.create_customs_declaration(
-            package_ref,
-            content_description,
-            destination_country,
-            value_amount,
-            customs_book_entry,
-        )
-    except RecoverableToolError as error:
-        return _error_result(error, package_ref=package_ref)
-
-
-def list_customs_declarations() -> list[dict[str, object]] | dict[str, object]:
-    try:
-        return customs_sdk.list_customs_declarations()
-    except RecoverableToolError as error:
-        return _error_result(error)
-
-
-LIST_PACKAGES_TOOL = Tool(
-    list_packages,
-    name="list_packages",
-    description="List all packages currently known to logistics, including status and customs details.",
+LIST_OPEN_TICKETS_TOOL = Tool(
+    list_open_tickets,
+    name="list_open_tickets",
+    description="List all open support tickets waiting for triage.",
 )
-WRITE_CUSTOMS_DETAILS_TOOL = Tool(
-    write_customs_details,
-    name="write_customs_details",
-    description="Attach customs details to a package in logistics using package_id, content_description, hs_code, and origin_country.",
+GET_TICKET_TOOL = Tool(
+    get_ticket,
+    name="get_ticket",
+    description="Get one ticket by numeric ticket_id, including subject and body.",
 )
-MOVE_TO_FREIGHT_TOOL = Tool(
-    move_to_freight,
-    name="move_to_freight",
-    description="Move packages into freight after all customs work is complete. Input is a list of numeric package IDs.",
+SEARCH_KNOWLEDGE_BASE_TOOL = Tool(
+    search_knowledge_base,
+    name="search_knowledge_base",
+    description="Search the helpdesk knowledge base for reply guidance. Pass a short query.",
 )
-LOAD_CONTENT_DESCRIPTIONS_TOOL = Tool(
-    load_content_descriptions,
-    name="load_content_descriptions",
-    description="Load missing package content descriptions into customs. Input is a list of items with package_ref and content_description.",
+CLASSIFY_TICKET_TOOL = Tool(
+    classify_ticket,
+    name="classify_ticket",
+    description=(
+        "Classify a ticket. category must be billing|technical|account|other. "
+        "priority must be low|medium|high. Set needs_human=true for abuse or "
+        "cases a bot should not close."
+    ),
 )
-LIST_CONTENT_DESCRIPTIONS_TOOL = Tool(
-    list_content_descriptions,
-    name="list_content_descriptions",
-    description="List all package content descriptions currently loaded in customs.",
+WRITE_REPLY_TOOL = Tool(
+    write_reply,
+    name="write_reply",
+    description="Draft a customer-facing reply for a classified ticket.",
 )
-GET_CUSTOMS_BOOK_TOOL = Tool(
-    get_customs_book,
-    name="get_customs_book",
-    description="Get the valid customs book entries for declarations.",
+RESOLVE_TICKET_TOOL = Tool(
+    resolve_ticket,
+    name="resolve_ticket",
+    description="Resolve a triaged ticket that already has a reply and does not need a human.",
 )
-GET_HS_CODE_DICTIONARY_TOOL = Tool(
-    get_hs_code_dictionary,
-    name="get_hs_code_dictionary",
-    description="Get HS code classification guidance.",
-)
-CREATE_CUSTOMS_DECLARATION_TOOL = Tool(
-    create_customs_declaration,
-    name="create_customs_declaration",
-    description="Create one missing customs declaration using package_ref, content_description, destination_country, value_amount, and a valid customs_book_entry.",
-)
-LIST_CUSTOMS_DECLARATIONS_TOOL = Tool(
-    list_customs_declarations,
-    name="list_customs_declarations",
-    description="List all customs declarations that have already been created.",
+ESCALATE_TICKET_TOOL = Tool(
+    escalate_ticket,
+    name="escalate_ticket",
+    description="Escalate a ticket to a human agent with a short reason.",
 )
 
-LOGISTICS_TOOLS = [
-    LIST_PACKAGES_TOOL,
-    WRITE_CUSTOMS_DETAILS_TOOL,
-    MOVE_TO_FREIGHT_TOOL,
+TRIAGE_TOOLS = [
+    LIST_OPEN_TICKETS_TOOL,
+    GET_TICKET_TOOL,
+    CLASSIFY_TICKET_TOOL,
 ]
-CUSTOMS_TOOLS = [
-    LOAD_CONTENT_DESCRIPTIONS_TOOL,
-    LIST_CONTENT_DESCRIPTIONS_TOOL,
-    GET_CUSTOMS_BOOK_TOOL,
-    GET_HS_CODE_DICTIONARY_TOOL,
-    CREATE_CUSTOMS_DECLARATION_TOOL,
-    LIST_CUSTOMS_DECLARATIONS_TOOL,
+REPLY_TOOLS = [
+    GET_TICKET_TOOL,
+    SEARCH_KNOWLEDGE_BASE_TOOL,
+    WRITE_REPLY_TOOL,
 ]
-ALL_TOOLS = [*LOGISTICS_TOOLS, *CUSTOMS_TOOLS]
+CLOSE_TOOLS = [
+    RESOLVE_TICKET_TOOL,
+    ESCALATE_TICKET_TOOL,
+]
+ALL_TOOLS = [
+    LIST_OPEN_TICKETS_TOOL,
+    GET_TICKET_TOOL,
+    SEARCH_KNOWLEDGE_BASE_TOOL,
+    CLASSIFY_TICKET_TOOL,
+    WRITE_REPLY_TOOL,
+    RESOLVE_TICKET_TOOL,
+    ESCALATE_TICKET_TOOL,
+]
 
-__all__ = ["ALL_TOOLS", "CUSTOMS_TOOLS", "LOGISTICS_TOOLS"]
+__all__ = [
+    "ALL_TOOLS",
+    "CLOSE_TOOLS",
+    "REPLY_TOOLS",
+    "TRIAGE_TOOLS",
+]

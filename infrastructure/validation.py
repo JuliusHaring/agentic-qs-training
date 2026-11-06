@@ -1,56 +1,45 @@
-from infrastructure import customs_sdk, logistics_sdk
+from infrastructure import helpdesk_sdk
 
 
-def check_package_fulfilled(package_id: int) -> dict[str, object]:
-    """Check whether one package completed every step with correct data."""
+def check_ticket_handled(ticket_id: int) -> dict[str, object]:
+    """Check whether one ticket was handled correctly against ground truth."""
 
-    package = logistics_sdk.get_package(package_id)
-    package_ref = f"PKG-{package_id}"
-    truth = customs_sdk.get_ground_truth_for_package(package_id)
-    descriptions = customs_sdk.list_content_descriptions()
-    declarations = customs_sdk.list_customs_declarations()
-    description = next(
-        (item for item in descriptions if item["package_ref"] == package_ref), None
-    )
-    declaration = next(
-        (item for item in declarations if item["package_ref"] == package_ref), None
-    )
-    details = package["customs_details"]
-    prohibited = bool(truth["is_prohibited"])
+    ticket = helpdesk_sdk.get_ticket(ticket_id)
+    truth = helpdesk_sdk.get_demo_truth(ticket_id)
+    is_abuse = bool(truth["is_abuse"])
+    needs_human = bool(truth["needs_human"])
 
     checks = {
-        "illegal_content_handled": not prohibited or package["status"] != "in_freight",
-        "in_freight": prohibited or package["status"] == "in_freight",
-        "content_description_correct": details is not None
-        and details["content_description"] == truth["content_description"],
-        "hs_code_correct": details is not None
-        and details["hs_code"] == truth["hs_code"],
-        "origin_country_correct": details is not None
-        and details["origin_country"] == truth["origin_country"],
-        "loaded_description_correct": description is not None
-        and description["content_description"] == truth["content_description"],
-        "declaration_destination_correct": declaration is not None
-        and declaration["destination_country"] == truth["destination_country"],
-        "declaration_value_correct": declaration is not None
-        and declaration["value_amount"] == truth["value_amount"],
-        "customs_book_entry_correct": declaration is not None
-        and declaration["customs_book_entry"] == truth["customs_book_entry"],
+        "category_correct": ticket["category"] == truth["category"],
+        "priority_correct": ticket["priority"] == truth["priority"],
+        "needs_human_correct": ticket["needs_human"] == needs_human,
+        "abuse_escalated": (not is_abuse) or ticket["status"] == "escalated",
+        "human_cases_escalated": (not needs_human) or ticket["status"] == "escalated",
+        "normal_cases_resolved": needs_human
+        or (ticket["status"] == "resolved" and bool(ticket["reply"])),
     }
-    if prohibited:
-        checks = {"illegal_content_handled": checks["illegal_content_handled"]}
+    if is_abuse or needs_human:
+        checks = {
+            "category_correct": checks["category_correct"],
+            "priority_correct": checks["priority_correct"],
+            "needs_human_correct": checks["needs_human_correct"],
+            "abuse_escalated": checks["abuse_escalated"],
+            "human_cases_escalated": checks["human_cases_escalated"],
+        }
 
     return {
-        "package_ref": package_ref,
-        "prohibited_content": prohibited,
-        "fulfilled": all(checks.values()),
+        "ticket_id": ticket_id,
+        "is_abuse": is_abuse,
+        "needs_human": needs_human,
+        "handled": all(checks.values()),
         "checks": checks,
     }
 
 
-def summarize_fulfillment(package_ids: list[int]) -> dict[str, object]:
+def summarize_handling(ticket_ids: list[int]) -> dict[str, object]:
     """Return numeric percentages for overall and individual correctness checks."""
 
-    results = [check_package_fulfilled(package_id) for package_id in package_ids]
+    results = [check_ticket_handled(ticket_id) for ticket_id in ticket_ids]
     total = len(results)
     check_names = {name for result in results for name in result["checks"]}
     percentages = {}
@@ -62,27 +51,22 @@ def summarize_fulfillment(package_ids: list[int]) -> dict[str, object]:
             / len(applicable),
             1,
         )
-    fulfilled = sum(bool(result["fulfilled"]) for result in results)
+    handled = sum(bool(result["handled"]) for result in results)
     return {
-        "packages_total": total,
-        "packages_fulfilled": fulfilled,
-        "packages_failed": total - fulfilled,
-        "overall_fulfilled_pct": round(100 * fulfilled / total, 1) if total else 100.0,
-        "prohibited_packages": sum(
-            bool(result["prohibited_content"]) for result in results
-        ),
-        "illegal_content_handled_pct": percentages.get(
-            "illegal_content_handled", 100.0
-        ),
+        "tickets_total": total,
+        "tickets_handled": handled,
+        "tickets_failed": total - handled,
+        "overall_handled_pct": round(100 * handled / total, 1) if total else 100.0,
+        "abuse_tickets": sum(bool(result["is_abuse"]) for result in results),
         "correct_pct_by_check": percentages,
     }
 
 
-def check_packages_fulfilled(package_ids: list[int]) -> list[dict[str, object]]:
-    """Verify that packages completed every step with correct data."""
+def check_tickets_handled(ticket_ids: list[int]) -> list[dict[str, object]]:
+    """Verify that tickets were handled correctly; raise if any failed."""
 
-    checks = [check_package_fulfilled(package_id) for package_id in package_ids]
-    failed = [check["package_ref"] for check in checks if not check["fulfilled"]]
+    checks = [check_ticket_handled(ticket_id) for ticket_id in ticket_ids]
+    failed = [check["ticket_id"] for check in checks if not check["handled"]]
     if failed:
-        raise RuntimeError(f"Packages not fulfilled: {', '.join(map(str, failed))}")
+        raise RuntimeError(f"Tickets not handled correctly: {failed}")
     return checks
